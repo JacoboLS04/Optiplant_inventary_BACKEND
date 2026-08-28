@@ -13,7 +13,7 @@ public interface MovimientoInventarioMapper {
     @Mapping(source = "producto.nombre", target = "nombreProducto")
     @Mapping(source = "sucursal.id", target = "sucursalId")
     @Mapping(source = "sucursal.nombre", target = "nombreSucursal")
-    @Mapping(source = "usuario.id", target = "usuarioId")
-    @Mapping(source = "usuario.nombre", target = "nombreUsuario")
-    MovimientoInventarioResponse toResponse(MovimientoInventario movimiento);
+    @Mapping(target = "usuarioId", expression = "java(m.getUsuario() != null ? m.getUsuario().getId() : null)")
+    @Mapping(target = "nombreUsuario", expression = "java(m.getUsuario() != null ? m.getUsuario().getNombre() : null)")
+    MovimientoInventarioResponse toResponse(MovimientoInventario m);
 }

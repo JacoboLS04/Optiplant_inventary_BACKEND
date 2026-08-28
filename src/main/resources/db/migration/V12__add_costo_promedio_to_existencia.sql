@@ -1,0 +1,1 @@
+ALTER TABLE existencia ADD COLUMN costo_promedio NUMERIC(12,2) NOT NULL DEFAULT 0;

@@ -19,6 +19,9 @@ import com.optiplant.inventario.inventario.repository.MovimientoInventarioReposi
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,12 +55,7 @@ public class MovimientoInventarioService {
                     "Tipo de movimiento inválido. Use 'ingreso' o 'retiro'.");
         }
 
-        Usuario usuario = null;
-        if (request.getUsuarioId() != null) {
-            usuario = usuarioRepository.findById(request.getUsuarioId())
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Usuario no encontrado: " + request.getUsuarioId()));
-        }
+        Usuario usuario = resolveUsuario(request.getUsuarioId());
 
         Optional<Existencia> existenciaOpt = existenciaRepository
                 .findByProductoIdAndSucursalId(request.getProductoId(), request.getSucursalId());
@@ -116,5 +114,23 @@ public class MovimientoInventarioService {
                 movimientos.getContent().stream().map(mapper::toResponse).toList(),
                 page, size,
                 movimientos.getTotalElements(), movimientos.getTotalPages());
+    }
+
+    private Usuario resolveUsuario(Long explicitUsuarioId) {
+        if (explicitUsuarioId != null) {
+            return usuarioRepository.findById(explicitUsuarioId)
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Usuario no encontrado: " + explicitUsuarioId));
+        }
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof UserDetails userDetails) {
+            String email = userDetails.getUsername();
+            return usuarioRepository.findByEmail(email)
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Usuario autenticado no encontrado: " + email));
+        }
+
+        return null;
     }
 }

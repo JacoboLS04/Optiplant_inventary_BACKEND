@@ -9,14 +9,18 @@ import com.optiplant.inventario.catalogo.mapper.ProductoMapper;
 import com.optiplant.inventario.catalogo.repository.ProductoRepository;
 import com.optiplant.inventario.common.dto.PaginatedResponse;
 import com.optiplant.inventario.common.exception.ResourceNotFoundException;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -30,12 +34,29 @@ public class ProductoService {
     private static final String SKU_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final SecureRandom RANDOM = new SecureRandom();
 
+    @Transactional(readOnly = true)
     public PaginatedResponse<ProductoResponse> search(String search, Long categoriaId, int page, int size) {
-        String pattern = (search != null && !search.isBlank())
-                ? "%" + search.toLowerCase() + "%"
-                : null;
-        Page<ProductoResponse> pageResult = repository
-                .search(pattern, categoriaId, PageRequest.of(page, size, Sort.by("nombre")))
+
+        Specification<Producto> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (search != null && !search.isBlank()) {
+                String pattern = "%" + search.toLowerCase().trim() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("nombre")), pattern),
+                        cb.like(cb.lower(root.get("sku")), pattern)
+                ));
+            }
+
+            if (categoriaId != null) {
+                predicates.add(cb.equal(root.get("categoria").get("id"), categoriaId));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        Page<ProductoResponse> pageResult = repository.findAll(spec,
+                        PageRequest.of(page, size, Sort.by("nombre")))
                 .map(mapper::toResponse);
         return new PaginatedResponse<>(
                 pageResult.getContent(), page, size,

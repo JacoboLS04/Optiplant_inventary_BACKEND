@@ -17,7 +17,7 @@ public interface ExistenciaMapper {
     @Mapping(source = "sucursal.nombre", target = "nombreSucursal")
     @Mapping(target = "cantidadDisponible", expression = "java(existencia.getCantidadFisica().subtract(existencia.getCantidadReservada()))")
     @Mapping(target = "estadoStock", expression = "java(calcularEstadoStock(existencia))")
-    @Mapping(target = "precio", expression = "java(java.math.BigDecimal.ZERO)")
+    @Mapping(target = "precio", ignore = true)
     ExistenciaResponse toResponse(Existencia existencia);
 
     default String calcularEstadoStock(Existencia existencia) {

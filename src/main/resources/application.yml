@@ -32,3 +32,7 @@ springdoc:
     path: /api/v1/swagger-ui.html
     tags-sorter: alpha
     operations-sorter: alpha
+
+jwt:
+  secret: ${JWT_SECRET:dGhpcyBpcyBhIHZlcnkgbG9uZyBzZWNyZXQga2V5IGZvciBqd3QgdG9rZW4gZ2VuZXJhdGlvbiBpbiBkZXYgbW9kZQ==}
+  expiration: ${JWT_EXPIRATION:86400000}

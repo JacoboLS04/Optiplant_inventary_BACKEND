@@ -1,7 +1,10 @@
 package com.optiplant.inventario.inventario.service;
 
+import com.optiplant.inventario.catalogo.service.PrecioService;
 import com.optiplant.inventario.common.dto.PaginatedResponse;
+import com.optiplant.inventario.common.exception.ResourceNotFoundException;
 import com.optiplant.inventario.inventario.dto.ExistenciaResponse;
+import com.optiplant.inventario.inventario.dto.ExistenciaUpdateRequest;
 import com.optiplant.inventario.inventario.entity.Existencia;
 import com.optiplant.inventario.inventario.mapper.ExistenciaMapper;
 import com.optiplant.inventario.inventario.repository.ExistenciaRepository;
@@ -24,6 +27,7 @@ public class ExistenciaService {
 
     private final ExistenciaRepository repository;
     private final ExistenciaMapper mapper;
+    private final PrecioService precioService;
 
     @Transactional(readOnly = true)
     public PaginatedResponse<ExistenciaResponse> search(
@@ -68,7 +72,7 @@ public class ExistenciaService {
         Page<Existencia> existencias = repository.findAll(spec,
                 PageRequest.of(page, size));
 
-        Page<ExistenciaResponse> responsePage = existencias.map(mapper::toResponse);
+        Page<ExistenciaResponse> responsePage = existencias.map(this::toResponseWithPrice);
 
         if (estadoStock != null && !estadoStock.isBlank()) {
             List<ExistenciaResponse> filtered = responsePage.getContent().stream()
@@ -82,5 +86,22 @@ public class ExistenciaService {
         return new PaginatedResponse<>(
                 responsePage.getContent(), page, size,
                 responsePage.getTotalElements(), responsePage.getTotalPages());
+    }
+
+    @Transactional
+    public ExistenciaResponse updateStockMinimo(Long id,
+                                                ExistenciaUpdateRequest request) {
+        Existencia existencia = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Existencia no encontrada: " + id));
+        existencia.setStockMinimo(request.getStockMinimo());
+        repository.save(existencia);
+        return toResponseWithPrice(existencia);
+    }
+
+    private ExistenciaResponse toResponseWithPrice(Existencia existencia) {
+        ExistenciaResponse r = mapper.toResponse(existencia);
+        r.setPrecio(precioService.obtenerPrecioGlobal(existencia.getProducto().getId()));
+        return r;
     }
 }

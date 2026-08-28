@@ -2,7 +2,9 @@ package com.optiplant.inventario.inventario.controller;
 
 import com.optiplant.inventario.common.dto.PaginatedResponse;
 import com.optiplant.inventario.inventario.dto.ExistenciaResponse;
+import com.optiplant.inventario.inventario.dto.ExistenciaUpdateRequest;
 import com.optiplant.inventario.inventario.service.ExistenciaService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -33,5 +35,12 @@ public class ExistenciaController {
         return ResponseEntity.ok(service.search(
                 search, categoriaId, sucursalId, estadoStock,
                 actualizadoDesde, actualizadoHasta, page, size));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ExistenciaResponse> updateStockMinimo(
+            @PathVariable Long id,
+            @Valid @RequestBody ExistenciaUpdateRequest request) {
+        return ResponseEntity.ok(service.updateStockMinimo(id, request));
     }
 }

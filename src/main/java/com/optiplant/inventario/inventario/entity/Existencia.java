@@ -42,6 +42,10 @@ public class Existencia {
     @Builder.Default
     private BigDecimal stockMinimo = BigDecimal.ZERO;
 
+    @Column(name = "costo_promedio", nullable = false, precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal costoPromedio = BigDecimal.ZERO;
+
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
