@@ -31,4 +31,8 @@ public class Usuario {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sucursal_id")
     private com.optiplant.inventario.catalogo.entity.Sucursal sucursal;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean activo = true;
 }

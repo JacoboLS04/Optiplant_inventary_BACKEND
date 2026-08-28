@@ -26,11 +26,14 @@ import com.optiplant.inventario.transferencias.entity.RolAprobacion;
 import com.optiplant.inventario.transferencias.entity.Transferencia;
 import com.optiplant.inventario.transferencias.entity.TransferenciaAprobacion;
 import com.optiplant.inventario.transferencias.entity.TransferenciaFaltante;
+import com.optiplant.inventario.transferencias.entity.TransferenciaLinea;
 import com.optiplant.inventario.transferencias.entity.TratamientoFaltante;
+import com.optiplant.inventario.transferencias.entity.UrgenciaTransferencia;
 import com.optiplant.inventario.transferencias.mapper.TransferenciaMapper;
 import com.optiplant.inventario.transferencias.repository.ReservaStockRepository;
 import com.optiplant.inventario.transferencias.repository.TransferenciaAprobacionRepository;
 import com.optiplant.inventario.transferencias.repository.TransferenciaFaltanteRepository;
+import com.optiplant.inventario.transferencias.repository.TransferenciaLineaRepository;
 import com.optiplant.inventario.transferencias.repository.TransferenciaRepository;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
@@ -47,8 +50,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -57,6 +62,7 @@ public class TransferenciaService {
     private static final String PREFIJO_CODIGO = "TR-";
 
     private final TransferenciaRepository transferenciaRepository;
+    private final TransferenciaLineaRepository lineaRepository;
     private final TransferenciaAprobacionRepository aprobacionRepository;
     private final ReservaStockRepository reservaRepository;
     private final TransferenciaFaltanteRepository faltanteRepository;
@@ -74,9 +80,6 @@ public class TransferenciaService {
                     "La sucursal de origen no puede ser igual a la sucursal de destino.");
         }
 
-        Producto producto = productoRepository.findById(request.getProductoId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Producto no encontrado: " + request.getProductoId()));
         Sucursal origen = sucursalRepository.findById(request.getSucursalOrigenId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Sucursal origen no encontrada: " + request.getSucursalOrigenId()));
@@ -84,22 +87,39 @@ public class TransferenciaService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Sucursal destino no encontrada: " + request.getSucursalDestinoId()));
 
+        Set<Long> productosVistos = new HashSet<>();
+        List<TransferenciaLinea> lineas = new ArrayList<>();
+        for (TransferenciaRequest.LineaRequest lineaReq : request.getLineas()) {
+            if (!productosVistos.add(lineaReq.getProductoId())) {
+                throw new BusinessRuleException(
+                        "El producto " + lineaReq.getProductoId()
+                                + " aparece más de una vez en la transferencia.");
+            }
+            Producto producto = productoRepository.findById(lineaReq.getProductoId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Producto no encontrado: " + lineaReq.getProductoId()));
+            lineas.add(TransferenciaLinea.builder()
+                    .producto(producto)
+                    .cantidadSolicitada(lineaReq.getCantidadSolicitada())
+                    .build());
+        }
+
         Transferencia transferencia = Transferencia.builder()
                 .codigo(generarCodigo())
-                .producto(producto)
                 .sucursalOrigen(origen)
                 .sucursalDestino(destino)
                 .usuarioSolicitante(resolveUsuario())
-                .cantidadSolicitada(request.getCantidadSolicitada())
                 .urgencia(request.getUrgencia() != null
-                        ? request.getUrgencia()
-                        : com.optiplant.inventario.transferencias.entity.UrgenciaTransferencia.NORMAL)
+                        ? request.getUrgencia() : UrgenciaTransferencia.NORMAL)
                 .transportista(request.getTransportista())
                 .guia(request.getGuia())
                 .fechaEstimadaLlegada(request.getFechaEstimadaLlegada())
                 .estado(EstadoTransferencia.SOLICITADA)
                 .fechaSolicitud(LocalDateTime.now())
                 .build();
+
+        lineas.forEach(linea -> linea.setTransferencia(transferencia));
+        transferencia.setLineas(lineas);
 
         return toResponse(transferenciaRepository.save(transferencia));
     }
@@ -114,11 +134,15 @@ public class TransferenciaService {
 
             if (busqueda != null && !busqueda.isBlank()) {
                 String patron = "%" + busqueda.trim().toLowerCase() + "%";
+                var joinLineas = root.join("lineas");
                 predicates.add(cb.or(
                         cb.like(cb.lower(root.get("codigo")), patron),
-                        cb.like(cb.lower(root.get("producto").get("nombre")), patron),
-                        cb.like(cb.lower(root.get("producto").get("sku")), patron)
+                        cb.like(cb.lower(root.get("sucursalOrigen").get("nombre")), patron),
+                        cb.like(cb.lower(root.get("sucursalDestino").get("nombre")), patron),
+                        cb.like(cb.lower(joinLineas.get("producto").get("nombre")), patron),
+                        cb.like(cb.lower(joinLineas.get("producto").get("sku")), patron)
                 ));
+                query.distinct(true);
             }
 
             if (sucursalOrigenId != null) {
@@ -200,7 +224,7 @@ public class TransferenciaService {
 
         if (tieneOrigen && tieneDestino) {
             validarDisponibilidadOrigen(transferencia);
-            crearReserva(transferencia);
+            crearReservas(transferencia);
             transferencia.setEstado(EstadoTransferencia.APROBADA);
         }
 
@@ -229,43 +253,58 @@ public class TransferenciaService {
                             + transferencia.getEstado());
         }
 
-        BigDecimal cantidad = request.getCantidadDespachada();
-        ReservaStock reserva = reservaRepository.findByTransferenciaId(id)
-                .orElseThrow(() -> new BusinessRuleException(
-                        "No existe reserva de stock para esta transferencia."));
-        if (reserva.getEstado() != EstadoReserva.ACTIVA) {
-            throw new BusinessRuleException(
-                    "La reserva no está ACTIVA; no se puede despachar. Estado: " + reserva.getEstado());
+        List<TransferenciaLinea> lineas = lineaRepository.findByTransferenciaId(id);
+        for (TransferenciaDespachoRequest.LineaDespacho item : request.getLineas()) {
+            TransferenciaLinea linea = lineas.stream()
+                    .filter(l -> l.getId().equals(item.getTransferenciaLineaId()))
+                    .findFirst()
+                    .orElseThrow(() -> new BusinessRuleException(
+                            "La línea " + item.getTransferenciaLineaId()
+                                    + " no pertenece a la transferencia " + id));
+
+            ReservaStock reserva = reservaRepository.findByLineaId(linea.getId())
+                    .orElseThrow(() -> new BusinessRuleException(
+                            "No existe reserva de stock para la línea " + linea.getId()));
+            if (reserva.getEstado() != EstadoReserva.ACTIVA) {
+                throw new BusinessRuleException(
+                        "La reserva no está ACTIVA; no se puede despachar. Estado: "
+                                + reserva.getEstado());
+            }
+
+            BigDecimal cantidad = item.getCantidadDespachada();
+            Existencia existencia = getOrCreateExistencia(linea.getProducto(),
+                    transferencia.getSucursalOrigen());
+            BigDecimal disponibleReal = existencia.getCantidadFisica()
+                    .subtract(existencia.getCantidadReservada());
+            if (cantidad.compareTo(disponibleReal) > 0) {
+                throw new BusinessRuleException(
+                        "Cantidad a despachar excede la disponible real de origen. Disponible: "
+                                + disponibleReal + ", solicitado: " + cantidad);
+            }
+
+            BigDecimal desplazar = cantidad.min(reserva.getCantidad());
+
+            movimientoInventarioService.registrar(new MovimientoInventarioRequest(
+                    linea.getProducto().getId(),
+                    transferencia.getSucursalOrigen().getId(),
+                    "retiro",
+                    "transferencia - " + transferencia.getCodigo(),
+                    desplazar,
+                    resolverIdUsuario()));
+
+            reserva.setEstado(EstadoReserva.CONSUMIDA);
+            reservaRepository.save(reserva);
+
+            Existencia existenciaActualizada = getOrCreateExistencia(linea.getProducto(),
+                    transferencia.getSucursalOrigen());
+            existenciaActualizada.setCantidadReservada(
+                    existenciaActualizada.getCantidadReservada().subtract(desplazar));
+            existenciaRepository.save(existenciaActualizada);
+
+            linea.setCantidadDespachada(cantidad);
+            lineaRepository.save(linea);
         }
 
-        Existencia existencia = getExistenciaOrigen(transferencia);
-        BigDecimal disponibleReal = existencia.getCantidadFisica()
-                .subtract(existencia.getCantidadReservada());
-        if (cantidad.compareTo(disponibleReal) > 0) {
-            throw new BusinessRuleException(
-                    "Cantidad a despachar excede la disponible real de origen. Disponible: "
-                            + disponibleReal + ", solicitado: " + cantidad);
-        }
-
-        BigDecimal desplazar = cantidad.min(reserva.getCantidad());
-
-        movimientoInventarioService.registrar(new MovimientoInventarioRequest(
-                transferencia.getProducto().getId(),
-                transferencia.getSucursalOrigen().getId(),
-                "retiro",
-                "transferencia - " + transferencia.getCodigo(),
-                desplazar,
-                resolverIdUsuario()));
-
-        reserva.setEstado(EstadoReserva.CONSUMIDA);
-        reservaRepository.save(reserva);
-
-        Existencia existenciaActualizada = getExistenciaOrigen(transferencia);
-        existenciaActualizada.setCantidadReservada(
-                existenciaActualizada.getCantidadReservada().subtract(desplazar));
-        existenciaRepository.save(existenciaActualizada);
-
-        transferencia.setCantidadDespachada(cantidad);
         transferencia.setTransportista(request.getTransportista() != null
                 ? request.getTransportista() : transferencia.getTransportista());
         transferencia.setGuia(request.getGuia() != null
@@ -286,45 +325,59 @@ public class TransferenciaService {
                             + transferencia.getEstado());
         }
 
-        BigDecimal cantidadRecibida = request.getCantidadRecibida();
-        BigDecimal despachada = transferencia.getCantidadDespachada() != null
-                ? transferencia.getCantidadDespachada()
-                : transferencia.getCantidadSolicitada();
-        if (cantidadRecibida.compareTo(despachada) > 0) {
-            throw new BusinessRuleException(
-                    "No puede recibir más de lo despachado. Despachado: " + despachada);
+        List<TransferenciaLinea> lineas = lineaRepository.findByTransferenciaId(id);
+        boolean algunFaltante = false;
+
+        for (TransferenciaRecepcionRequest.LineaRecepcion item : request.getLineas()) {
+            TransferenciaLinea linea = lineas.stream()
+                    .filter(l -> l.getId().equals(item.getTransferenciaLineaId()))
+                    .findFirst()
+                    .orElseThrow(() -> new BusinessRuleException(
+                            "La línea " + item.getTransferenciaLineaId()
+                                    + " no pertenece a la transferencia " + id));
+
+            BigDecimal cantidadRecibida = item.getCantidadRecibida();
+            BigDecimal despachada = linea.getCantidadDespachada() != null
+                    ? linea.getCantidadDespachada() : linea.getCantidadSolicitada();
+            if (cantidadRecibida.compareTo(despachada) > 0) {
+                throw new BusinessRuleException(
+                        "No puede recibir más de lo despachado. Despachado: " + despachada);
+            }
+
+            Existencia existenciaDestino = getOrCreateExistencia(linea.getProducto(),
+                    transferencia.getSucursalDestino());
+            movimientoInventarioService.registrar(new MovimientoInventarioRequest(
+                    linea.getProducto().getId(),
+                    transferencia.getSucursalDestino().getId(),
+                    "ingreso",
+                    "transferencia - " + transferencia.getCodigo(),
+                    cantidadRecibida,
+                    resolverIdUsuario()));
+            existenciaRepository.save(existenciaDestino);
+
+            linea.setCantidadRecibida(cantidadRecibida);
+            lineaRepository.save(linea);
+
+            boolean completo = cantidadRecibida.compareTo(despachada) >= 0;
+            if (!completo) {
+                algunFaltante = true;
+                TratamientoFaltante tratamiento = item.getTratamiento() != null
+                        ? item.getTratamiento() : TratamientoFaltante.RECLAMACION;
+                BigDecimal faltante = despachada.subtract(cantidadRecibida);
+                TransferenciaFaltante faltanteEntity = TransferenciaFaltante.builder()
+                        .linea(linea)
+                        .cantidadFaltante(faltante)
+                        .tratamiento(tratamiento)
+                        .usuario(resolveUsuario())
+                        .fecha(LocalDateTime.now())
+                        .build();
+                faltanteRepository.save(faltanteEntity);
+            }
         }
 
-        Existencia existenciaDestino = getExistenciaDestino(transferencia);
-        movimientoInventarioService.registrar(new MovimientoInventarioRequest(
-                transferencia.getProducto().getId(),
-                transferencia.getSucursalDestino().getId(),
-                "ingreso",
-                "transferencia - " + transferencia.getCodigo(),
-                cantidadRecibida,
-                resolverIdUsuario()));
-        existenciaRepository.save(existenciaDestino);
-
-        transferencia.setCantidadRecibida(cantidadRecibida);
         transferencia.setFechaRecepcion(LocalDateTime.now());
-
-        boolean completo = cantidadRecibida.compareTo(despachada) >= 0;
-        if (completo) {
-            transferencia.setEstado(EstadoTransferencia.RECIBIDA);
-        } else {
-            transferencia.setEstado(EstadoTransferencia.CON_FALTANTES);
-            TratamientoFaltante tratamiento = request.getTratamiento() != null
-                    ? request.getTratamiento() : TratamientoFaltante.RECLAMACION;
-            BigDecimal faltante = despachada.subtract(cantidadRecibida);
-            TransferenciaFaltante faltanteEntity = TransferenciaFaltante.builder()
-                    .transferencia(transferencia)
-                    .cantidadFaltante(faltante)
-                    .tratamiento(tratamiento)
-                    .usuario(resolveUsuario())
-                    .fecha(LocalDateTime.now())
-                    .build();
-            faltanteRepository.save(faltanteEntity);
-        }
+        transferencia.setEstado(algunFaltante
+                ? EstadoTransferencia.CON_FALTANTES : EstadoTransferencia.RECIBIDA);
 
         return toResponse(transferenciaRepository.save(transferencia));
     }
@@ -342,18 +395,19 @@ public class TransferenciaService {
         }
 
         if (transferencia.getEstado() == EstadoTransferencia.APROBADA) {
-            ReservaStock reserva = reservaRepository.findByTransferenciaId(id)
-                    .orElseThrow(() -> new BusinessRuleException(
-                            "No existe reserva de stock para esta transferencia."));
-            if (reserva.getEstado() == EstadoReserva.ACTIVA) {
-                reserva.setEstado(EstadoReserva.LIBERADA);
-                reserva.setFechaLiberacion(LocalDateTime.now());
-                reservaRepository.save(reserva);
+            for (ReservaStock reserva : reservaRepository
+                    .findByLineaTransferenciaId(id)) {
+                if (reserva.getEstado() == EstadoReserva.ACTIVA) {
+                    reserva.setEstado(EstadoReserva.LIBERADA);
+                    reserva.setFechaLiberacion(LocalDateTime.now());
+                    reservaRepository.save(reserva);
 
-                Existencia existencia = getExistenciaOrigen(transferencia);
-                existencia.setCantidadReservada(
-                        existencia.getCantidadReservada().subtract(reserva.getCantidad()));
-                existenciaRepository.save(existencia);
+                    Existencia existencia = getOrCreateExistencia(
+                            reserva.getProducto(), transferencia.getSucursalOrigen());
+                    existencia.setCantidadReservada(
+                            existencia.getCantidadReservada().subtract(reserva.getCantidad()));
+                    existenciaRepository.save(existencia);
+                }
             }
         }
 
@@ -362,40 +416,38 @@ public class TransferenciaService {
     }
 
     private void validarDisponibilidadOrigen(Transferencia transferencia) {
-        Existencia existencia = getExistenciaOrigen(transferencia);
-        BigDecimal disponible = existencia.getCantidadFisica()
-                .subtract(existencia.getCantidadReservada());
-        if (disponible.compareTo(transferencia.getCantidadSolicitada()) < 0) {
-            throw new BusinessRuleException(
-                    "Cantidad solicitada excede la cantidad disponible de origen. "
-                            + "Disponible: " + disponible + ", solicitada: "
-                            + transferencia.getCantidadSolicitada());
+        for (TransferenciaLinea linea : transferencia.getLineas()) {
+            Existencia existencia = getOrCreateExistencia(linea.getProducto(),
+                    transferencia.getSucursalOrigen());
+            BigDecimal disponible = existencia.getCantidadFisica()
+                    .subtract(existencia.getCantidadReservada());
+            if (disponible.compareTo(linea.getCantidadSolicitada()) < 0) {
+                throw new BusinessRuleException(
+                        "Cantidad solicitada excede la cantidad disponible de origen para "
+                                + linea.getProducto().getNombre() + ". Disponible: "
+                                + disponible + ", solicitada: " + linea.getCantidadSolicitada());
+            }
         }
     }
 
-    private void crearReserva(Transferencia transferencia) {
-        ReservaStock reserva = ReservaStock.builder()
-                .transferencia(transferencia)
-                .producto(transferencia.getProducto())
-                .sucursal(transferencia.getSucursalOrigen())
-                .cantidad(transferencia.getCantidadSolicitada())
-                .estado(EstadoReserva.ACTIVA)
-                .fechaCreacion(LocalDateTime.now())
-                .build();
-        reservaRepository.save(reserva);
+    private void crearReservas(Transferencia transferencia) {
+        for (TransferenciaLinea linea : transferencia.getLineas()) {
+            ReservaStock reserva = ReservaStock.builder()
+                    .linea(linea)
+                    .producto(linea.getProducto())
+                    .sucursal(transferencia.getSucursalOrigen())
+                    .cantidad(linea.getCantidadSolicitada())
+                    .estado(EstadoReserva.ACTIVA)
+                    .fechaCreacion(LocalDateTime.now())
+                    .build();
+            reservaRepository.save(reserva);
 
-        Existencia existencia = getExistenciaOrigen(transferencia);
-        existencia.setCantidadReservada(
-                existencia.getCantidadReservada().add(transferencia.getCantidadSolicitada()));
-        existenciaRepository.save(existencia);
-    }
-
-    private Existencia getExistenciaOrigen(Transferencia transferencia) {
-        return getOrCreateExistencia(transferencia.getProducto(), transferencia.getSucursalOrigen());
-    }
-
-    private Existencia getExistenciaDestino(Transferencia transferencia) {
-        return getOrCreateExistencia(transferencia.getProducto(), transferencia.getSucursalDestino());
+            Existencia existencia = getOrCreateExistencia(linea.getProducto(),
+                    transferencia.getSucursalOrigen());
+            existencia.setCantidadReservada(
+                    existencia.getCantidadReservada().add(linea.getCantidadSolicitada()));
+            existenciaRepository.save(existencia);
+        }
     }
 
     private Existencia getOrCreateExistencia(Producto producto, Sucursal sucursal) {
@@ -417,28 +469,49 @@ public class TransferenciaService {
     private TransferenciaResponse toResponse(Transferencia transferencia) {
         TransferenciaResponse response = mapper.toResponse(transferencia);
 
-        BigDecimal disponible = null;
-        Existencia existenciaOpt = existenciaRepository
-                .findByProductoIdAndSucursalId(
-                        transferencia.getProducto().getId(),
-                        transferencia.getSucursalOrigen().getId()).orElse(null);
-        if (existenciaOpt != null) {
-            disponible = existenciaOpt.getCantidadFisica()
-                    .subtract(existenciaOpt.getCantidadReservada());
+        List<TransferenciaResponse.LineaResponse> lineasRespuesta = new ArrayList<>();
+        BigDecimal totalUnidades = BigDecimal.ZERO;
+        for (TransferenciaLinea linea : transferencia.getLineas()) {
+            TransferenciaResponse.LineaResponse lineaResponse = mapper.toLineaResponse(linea);
+
+            BigDecimal despachada = linea.getCantidadDespachada() != null
+                    ? linea.getCantidadDespachada() : linea.getCantidadSolicitada();
+            BigDecimal medida = linea.getCantidadRecibida() != null
+                    ? linea.getCantidadRecibida() : despachada;
+            totalUnidades = totalUnidades.add(medida);
+
+            Existencia existencia = existenciaRepository
+                    .findByProductoIdAndSucursalId(
+                            linea.getProducto().getId(),
+                            transferencia.getSucursalOrigen().getId()).orElse(null);
+            if (existencia != null) {
+                lineaResponse.setCantidadDisponibleOrigen(existencia.getCantidadFisica()
+                        .subtract(existencia.getCantidadReservada()));
+            }
+
+            reservaRepository.findByLineaId(linea.getId()).ifPresent(r ->
+                    lineaResponse.setReserva(TransferenciaResponse.ReservaResponse.builder()
+                            .id(r.getId())
+                            .productoId(r.getProducto().getId())
+                            .sucursalId(r.getSucursal().getId())
+                            .cantidad(r.getCantidad())
+                            .estado(r.getEstado())
+                            .fechaCreacion(r.getFechaCreacion())
+                            .fechaLiberacion(r.getFechaLiberacion())
+                            .build()));
+
+            lineaResponse.setFaltantes(faltanteRepository
+                    .findByLineaTransferenciaId(transferencia.getId())
+                    .stream()
+                    .filter(f -> f.getLinea().getId().equals(linea.getId()))
+                    .map(mapper::toFaltanteResponse)
+                    .toList());
+
+            lineasRespuesta.add(lineaResponse);
         }
-        response.setCantidadDisponibleOrigen(disponible);
 
-        reservaRepository.findByTransferenciaId(transferencia.getId()).ifPresent(r ->
-                response.setReserva(TransferenciaResponse.ReservaResponse.builder()
-                        .id(r.getId())
-                        .productoId(r.getProducto().getId())
-                        .sucursalId(r.getSucursal().getId())
-                        .cantidad(r.getCantidad())
-                        .estado(r.getEstado())
-                        .fechaCreacion(r.getFechaCreacion())
-                        .fechaLiberacion(r.getFechaLiberacion())
-                        .build()));
-
+        response.setLineas(lineasRespuesta);
+        response.setTotalUnidades(totalUnidades);
         response.setAprobaciones(aprobacionRepository.findByTransferenciaId(transferencia.getId())
                 .stream().map(a -> TransferenciaResponse.AprobacionResponse.builder()
                         .id(a.getId())
@@ -449,9 +522,6 @@ public class TransferenciaService {
                         .fecha(a.getFecha())
                         .observacion(a.getObservacion())
                         .build()).toList());
-
-        response.setFaltantes(faltanteRepository.findByTransferenciaId(transferencia.getId())
-                .stream().map(mapper::toFaltanteResponse).toList());
 
         return response;
     }

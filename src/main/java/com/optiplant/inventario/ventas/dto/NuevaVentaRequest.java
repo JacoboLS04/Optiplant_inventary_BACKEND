@@ -1,7 +1,7 @@
-package com.optiplant.inventario.transferencias.dto;
+package com.optiplant.inventario.ventas.dto;
 
-import com.optiplant.inventario.transferencias.entity.UrgenciaTransferencia;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -11,30 +11,23 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class TransferenciaRequest {
+public class NuevaVentaRequest {
 
-    @NotNull(message = "La sucursal origen es obligatoria")
-    private Long sucursalOrigenId;
+    @NotNull(message = "La sucursal es obligatoria")
+    private Long sucursalId;
 
-    @NotNull(message = "La sucursal destino es obligatoria")
-    private Long sucursalDestinoId;
+    @NotNull(message = "El descuento es obligatorio")
+    @DecimalMin(value = "0", message = "El descuento no puede ser negativo")
+    @DecimalMax(value = "100", message = "El descuento no puede superar 100%")
+    private BigDecimal descuentoPorcentaje;
 
-    private UrgenciaTransferencia urgencia;
-
-    private String transportista;
-
-    private String guia;
-
-    private LocalDateTime fechaEstimadaLlegada;
-
-    @NotEmpty(message = "La transferencia debe incluir al menos una línea")
+    @NotEmpty(message = "La venta debe incluir al menos una línea")
     @Valid
     private List<LineaRequest> lineas;
 
@@ -47,8 +40,8 @@ public class TransferenciaRequest {
         @NotNull(message = "El producto es obligatorio")
         private Long productoId;
 
-        @NotNull(message = "La cantidad solicitada es obligatoria")
+        @NotNull(message = "La cantidad es obligatoria")
         @DecimalMin(value = "0.01", message = "La cantidad debe ser mayor a 0")
-        private BigDecimal cantidadSolicitada;
+        private BigDecimal cantidad;
     }
 }

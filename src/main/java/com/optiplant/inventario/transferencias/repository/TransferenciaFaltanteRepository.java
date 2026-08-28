@@ -7,5 +7,5 @@ import java.util.List;
 
 public interface TransferenciaFaltanteRepository extends JpaRepository<TransferenciaFaltante, Long> {
 
-    List<TransferenciaFaltante> findByTransferenciaId(Long transferenciaId);
+    List<TransferenciaFaltante> findByLineaTransferenciaId(Long transferenciaId);
 }

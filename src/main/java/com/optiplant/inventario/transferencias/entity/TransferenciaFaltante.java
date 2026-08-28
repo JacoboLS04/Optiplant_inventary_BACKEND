@@ -21,8 +21,8 @@ public class TransferenciaFaltante {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "transferencia_id", nullable = false)
-    private Transferencia transferencia;
+    @JoinColumn(name = "transferencia_linea_id", nullable = false)
+    private TransferenciaLinea linea;
 
     @Column(name = "cantidad_faltante", nullable = false, precision = 12, scale = 2)
     private BigDecimal cantidadFaltante;

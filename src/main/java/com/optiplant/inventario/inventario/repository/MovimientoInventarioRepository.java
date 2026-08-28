@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
+
 public interface MovimientoInventarioRepository extends JpaRepository<MovimientoInventario, Long> {
 
     @Query("""
@@ -21,4 +23,6 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
     Page<MovimientoInventario> search(@Param("productoId") Long productoId,
                                       @Param("sucursalId") Long sucursalId,
                                       Pageable pageable);
+
+    List<MovimientoInventario> findTop20ByOrderByFechaDesc();
 }

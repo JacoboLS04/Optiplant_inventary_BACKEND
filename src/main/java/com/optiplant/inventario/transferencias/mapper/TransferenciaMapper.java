@@ -3,6 +3,7 @@ package com.optiplant.inventario.transferencias.mapper;
 import com.optiplant.inventario.transferencias.dto.TransferenciaResponse;
 import com.optiplant.inventario.transferencias.entity.Transferencia;
 import com.optiplant.inventario.transferencias.entity.TransferenciaFaltante;
+import com.optiplant.inventario.transferencias.entity.TransferenciaLinea;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
@@ -11,9 +12,6 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface TransferenciaMapper {
 
-    @Mapping(target = "productoId", source = "producto.id")
-    @Mapping(target = "sku", source = "producto.sku")
-    @Mapping(target = "nombreProducto", source = "producto.nombre")
     @Mapping(target = "sucursalOrigenId", source = "sucursalOrigen.id")
     @Mapping(target = "nombreSucursalOrigen", source = "sucursalOrigen.nombre")
     @Mapping(target = "sucursalDestinoId", source = "sucursalDestino.id")
@@ -22,13 +20,26 @@ public interface TransferenciaMapper {
             expression = "java(t.getUsuarioSolicitante() != null ? t.getUsuarioSolicitante().getId() : null)")
     @Mapping(target = "nombreUsuarioSolicitante",
             expression = "java(t.getUsuarioSolicitante() != null ? t.getUsuarioSolicitante().getNombre() : null)")
-    @Mapping(target = "reserva", ignore = true)
+    @Mapping(target = "totalUnidades", ignore = true)
+    @Mapping(target = "lineas", ignore = true)
     @Mapping(target = "aprobaciones", ignore = true)
-    @Mapping(target = "faltantes", ignore = true)
-    @Mapping(target = "cantidadDisponibleOrigen", ignore = true)
     TransferenciaResponse toResponse(Transferencia t);
 
     List<TransferenciaResponse> toResponseList(List<Transferencia> transferencias);
+
+    @Mapping(target = "id", source = "linea.id")
+    @Mapping(target = "productoId", source = "linea.producto.id")
+    @Mapping(target = "sku", source = "linea.producto.sku")
+    @Mapping(target = "nombreProducto", source = "linea.producto.nombre")
+    @Mapping(target = "cantidadSolicitada", source = "linea.cantidadSolicitada")
+    @Mapping(target = "cantidadDespachada", source = "linea.cantidadDespachada")
+    @Mapping(target = "cantidadRecibida", source = "linea.cantidadRecibida")
+    @Mapping(target = "cantidadDisponibleOrigen", ignore = true)
+    @Mapping(target = "reserva", ignore = true)
+    @Mapping(target = "faltantes", ignore = true)
+    TransferenciaResponse.LineaResponse toLineaResponse(TransferenciaLinea linea);
+
+    List<TransferenciaResponse.LineaResponse> toLineaResponseList(List<TransferenciaLinea> lineas);
 
     @Mapping(target = "id", source = "id")
     @Mapping(target = "cantidadFaltante", source = "cantidadFaltante")

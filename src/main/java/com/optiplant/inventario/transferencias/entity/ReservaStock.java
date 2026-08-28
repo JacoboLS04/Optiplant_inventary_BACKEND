@@ -22,8 +22,8 @@ public class ReservaStock {
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "transferencia_id", nullable = false, unique = true)
-    private Transferencia transferencia;
+    @JoinColumn(name = "transferencia_linea_id", nullable = false, unique = true)
+    private TransferenciaLinea linea;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "producto_id", nullable = false)

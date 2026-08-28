@@ -21,18 +21,12 @@ public class TransferenciaResponse {
 
     private Long id;
     private String codigo;
-    private Long productoId;
-    private String sku;
-    private String nombreProducto;
     private Long sucursalOrigenId;
     private String nombreSucursalOrigen;
     private Long sucursalDestinoId;
     private String nombreSucursalDestino;
     private Long usuarioSolicitanteId;
     private String nombreUsuarioSolicitante;
-    private BigDecimal cantidadSolicitada;
-    private BigDecimal cantidadDespachada;
-    private BigDecimal cantidadRecibida;
     private UrgenciaTransferencia urgencia;
     private String transportista;
     private String guia;
@@ -41,10 +35,26 @@ public class TransferenciaResponse {
     private LocalDateTime fechaSolicitud;
     private LocalDateTime fechaDespacho;
     private LocalDateTime fechaRecepcion;
-    private BigDecimal cantidadDisponibleOrigen;
-    private ReservaResponse reserva;
+    private BigDecimal totalUnidades;
+    private List<LineaResponse> lineas;
     private List<AprobacionResponse> aprobaciones;
-    private List<FaltanteResponse> faltantes;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class LineaResponse {
+        private Long id;
+        private Long productoId;
+        private String sku;
+        private String nombreProducto;
+        private BigDecimal cantidadSolicitada;
+        private BigDecimal cantidadDespachada;
+        private BigDecimal cantidadRecibida;
+        private BigDecimal cantidadDisponibleOrigen;
+        private ReservaResponse reserva;
+        private List<FaltanteResponse> faltantes;
+    }
 
     @Data
     @Builder

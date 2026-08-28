@@ -8,6 +8,7 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -23,6 +24,12 @@ public class CustomUserDetailsService implements UserDetailsService {
         Usuario usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException(
                         "Usuario no encontrado con email: " + email));
+
+        Boolean activo = usuario.getActivo() != null ? usuario.getActivo() : true;
+        if (!activo) {
+            throw new DisabledException(
+                    "El usuario está desactivado: " + email);
+        }
 
         return new User(
                 usuario.getEmail(),
