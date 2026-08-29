@@ -2,6 +2,7 @@ package com.optiplant.inventario.identidad.controller;
 
 import com.optiplant.inventario.common.security.CustomUserDetailsService;
 import com.optiplant.inventario.common.security.JwtUtil;
+import com.optiplant.inventario.common.security.TokenRevocationService;
 import com.optiplant.inventario.identidad.dto.AuthResponse;
 import com.optiplant.inventario.identidad.dto.LoginRequest;
 import com.optiplant.inventario.identidad.dto.UsuarioResponse;
@@ -15,6 +16,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
@@ -24,6 +27,7 @@ public class AuthController {
     private final CustomUserDetailsService userDetailsService;
     private final JwtUtil jwtUtil;
     private final UsuarioRepository usuarioRepository;
+    private final TokenRevocationService tokenRevocationService;
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
@@ -42,5 +46,14 @@ public class AuthController {
                 .nombre(usuario.getNombre())
                 .rol(usuario.getRol())
                 .build());
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Map<String, String>> logout(
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        if (authorization != null && authorization.startsWith("Bearer ")) {
+            tokenRevocationService.revoke(authorization.substring(7));
+        }
+        return ResponseEntity.ok(Map.of("message", "Sesión cerrada correctamente"));
     }
 }

@@ -3,6 +3,8 @@ package com.optiplant.inventario.dashboard.controller;
 import com.optiplant.inventario.dashboard.dto.BranchNetworkResponse;
 import com.optiplant.inventario.dashboard.dto.InventoryMovementResponse;
 import com.optiplant.inventario.dashboard.dto.InventorySummaryResponse;
+import com.optiplant.inventario.dashboard.dto.RotacionResponse;
+import com.optiplant.inventario.dashboard.dto.VentasMensualesResponse;
 import com.optiplant.inventario.dashboard.service.DashboardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -32,5 +34,15 @@ public class DashboardController {
     @GetMapping("/red")
     public ResponseEntity<BranchNetworkResponse> red() {
         return ResponseEntity.ok(service.red());
+    }
+
+    @GetMapping("/rotacion")
+    public ResponseEntity<RotacionResponse> rotacion() {
+        return ResponseEntity.ok(service.rotacion());
+    }
+
+    @GetMapping("/ventas-mensuales")
+    public ResponseEntity<VentasMensualesResponse> ventasMensuales() {
+        return ResponseEntity.ok(service.ventasMensuales());
     }
 }

@@ -46,4 +46,9 @@ public class ProductoController {
             @Valid @RequestBody ProductoRequest request) {
         return ResponseEntity.ok(service.update(id, request));
     }
+
+    @PatchMapping("/{id}/estado")
+    public ResponseEntity<ProductoResponse> inactivar(@PathVariable Long id) {
+        return ResponseEntity.ok(service.inactivar(id));
+    }
 }

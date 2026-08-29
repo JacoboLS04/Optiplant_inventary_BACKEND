@@ -52,6 +52,8 @@ public class ProductoService {
                 predicates.add(cb.equal(root.get("categoria").get("id"), categoriaId));
             }
 
+            predicates.add(cb.equal(root.get("estado"), "activo"));
+
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
@@ -112,6 +114,18 @@ public class ProductoService {
             producto.setSku(request.getSku());
         }
 
+        return mapper.toResponse(repository.save(producto));
+    }
+
+    @Transactional
+    public ProductoResponse inactivar(Long id) {
+        Producto producto = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado: " + id));
+        if (!"activo".equals(producto.getEstado())) {
+            throw new com.optiplant.inventario.common.exception.BusinessRuleException(
+                    "El producto ya está inactivo: " + id);
+        }
+        producto.setEstado("inactivo");
         return mapper.toResponse(repository.save(producto));
     }
 

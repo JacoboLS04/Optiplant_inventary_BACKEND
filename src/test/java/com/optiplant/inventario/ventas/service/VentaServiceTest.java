@@ -4,6 +4,7 @@ import com.optiplant.inventario.catalogo.entity.Categoria;
 import com.optiplant.inventario.catalogo.entity.Producto;
 import com.optiplant.inventario.catalogo.entity.Sucursal;
 import com.optiplant.inventario.common.exception.BusinessRuleException;
+import com.optiplant.inventario.common.security.UsuarioActualService;
 import com.optiplant.inventario.inventario.entity.Existencia;
 import com.optiplant.inventario.inventario.repository.ExistenciaRepository;
 import com.optiplant.inventario.inventario.service.MovimientoInventarioService;
@@ -44,6 +45,8 @@ class VentaServiceTest {
     private com.optiplant.inventario.catalogo.service.PrecioService precioService;
     @Mock
     private VentaMapper mapper;
+    @Mock
+    private UsuarioActualService usuarioActualService;
 
     @InjectMocks
     private VentaService service;

@@ -5,6 +5,8 @@ import com.optiplant.inventario.catalogo.repository.SucursalRepository;
 import com.optiplant.inventario.dashboard.dto.BranchNetworkResponse;
 import com.optiplant.inventario.dashboard.dto.InventoryMovementResponse;
 import com.optiplant.inventario.dashboard.dto.InventorySummaryResponse;
+import com.optiplant.inventario.dashboard.dto.RotacionResponse;
+import com.optiplant.inventario.dashboard.dto.VentasMensualesResponse;
 import com.optiplant.inventario.inventario.entity.Existencia;
 import com.optiplant.inventario.inventario.entity.MovimientoInventario;
 import com.optiplant.inventario.inventario.repository.ExistenciaRepository;
@@ -19,10 +21,16 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
+import java.time.format.TextStyle;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -219,8 +227,131 @@ public class DashboardService {
                 .build();
     }
 
-    private InventoryMovementResponse toMovementResponse(MovimientoInventario m) {
-        String type = "ingreso".equals(m.getTipo()) ? "entrada" : "salida";
+    @Transactional(readOnly = true)
+    public RotacionResponse rotacion() {
+        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime desde = ahora.minusDays(30);
+
+        Map<Long, BigDecimal> unidadesPorProducto = new LinkedHashMap<>();
+
+        for (MovimientoInventario m : movimientoRepository.findAll()) {
+            if (m.getFecha() == null || m.getProducto() == null) {
+                continue;
+            }
+            Long pid = m.getProducto().getId();
+            if ("retiro".equals(m.getTipo())
+                    && !m.getFecha().isBefore(desde)) {
+                unidadesPorProducto.merge(pid, m.getCantidad(), BigDecimal::add);
+            }
+        }
+
+        Map<Long, BigDecimal> stockPorProducto = new LinkedHashMap<>();
+        for (Existencia e : existenciaRepository.findAll()) {
+            stockPorProducto.merge(e.getProducto().getId(),
+                    e.getCantidadFisica().subtract(e.getCantidadReservada()),
+                    BigDecimal::add);
+        }
+
+        Map<Long, String> skuPorProducto = new LinkedHashMap<>();
+        Map<Long, String> nombrePorProducto = new LinkedHashMap<>();
+        for (Existencia e : existenciaRepository.findAll()) {
+            skuPorProducto.putIfAbsent(e.getProducto().getId(), e.getProducto().getSku());
+            nombrePorProducto.putIfAbsent(e.getProducto().getId(), e.getProducto().getNombre());
+        }
+
+        List<RotacionResponse.ProductoRotacion> items = new ArrayList<>();
+        for (Long pid : unidadesPorProducto.keySet()) {
+            BigDecimal unidades = unidadesPorProducto.get(pid);
+            BigDecimal stock = stockPorProducto.getOrDefault(pid, CERO);
+            BigDecimal rotacion = stock.compareTo(CERO) > 0
+                    ? unidades.divide(stock, 4, RoundingMode.HALF_UP)
+                    : CERO;
+            items.add(RotacionResponse.ProductoRotacion.builder()
+                    .productoId(pid)
+                    .sku(skuPorProducto.getOrDefault(pid, "—"))
+                    .nombre(nombrePorProducto.getOrDefault(pid, "—"))
+                    .unidades(unidades)
+                    .stockActual(stock)
+                    .rotacion(rotacion)
+                    .build());
+        }
+
+        List<RotacionResponse.ProductoRotacion> alta = items.stream()
+                .sorted(Comparator
+                        .comparing(RotacionResponse.ProductoRotacion::getUnidades)
+                        .reversed())
+                .limit(5)
+                .collect(Collectors.toList());
+
+        List<RotacionResponse.ProductoRotacion> baja = stockPorProducto.entrySet().stream()
+                .filter(en -> en.getValue().compareTo(CERO) > 0
+                        && unidadesPorProducto.getOrDefault(en.getKey(), CERO).compareTo(CERO) == 0)
+                .sorted(Map.Entry.<Long, BigDecimal>comparingByValue().reversed())
+                .map(en -> RotacionResponse.ProductoRotacion.builder()
+                        .productoId(en.getKey())
+                        .sku(skuPorProducto.getOrDefault(en.getKey(), "—"))
+                        .nombre(nombrePorProducto.getOrDefault(en.getKey(), "—"))
+                        .unidades(CERO)
+                        .stockActual(en.getValue())
+                        .rotacion(CERO)
+                        .build())
+                .limit(5)
+                .collect(Collectors.toList());
+
+        BigDecimal totalUnidades = unidadesPorProducto.values().stream()
+                .reduce(CERO, BigDecimal::add);
+
+        return RotacionResponse.builder()
+                .periodoDias(30)
+                .totalUnidades(totalUnidades)
+                .altaDemanda(alta)
+                .bajaDemanda(baja)
+                .updatedAt(ahora)
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public VentasMensualesResponse ventasMensuales() {
+        int cantMeses = 4;
+        LocalDateTime ahora = LocalDateTime.now();
+        YearMonth mesActual = YearMonth.from(ahora);
+        LocalDateTime desde = mesActual.minusMonths(cantMeses - 1)
+                .atDay(1).atStartOfDay();
+
+        Map<Integer, BigDecimal> porMesClave = new HashMap<>();
+        for (Object[] row : ventaRepository.sumTotalPorMesDesde(desde)) {
+            int anio = ((Number) row[0]).intValue();
+            int mes = ((Number) row[1]).intValue();
+            BigDecimal total = (BigDecimal) row[2];
+            porMesClave.put(anio * 100 + mes, total);
+        }
+
+        List<VentasMensualesResponse.MesVentas> meses = new ArrayList<>();
+        BigDecimal totalPeriodo = CERO;
+        for (int i = cantMeses - 1; i >= 0; i--) {
+            YearMonth ym = mesActual.minusMonths(i);
+            BigDecimal total = porMesClave.getOrDefault(
+                    ym.getYear() * 100 + ym.getMonthValue(), CERO);
+            totalPeriodo = totalPeriodo.add(total);
+            String abrev = ym.getMonth().getDisplayName(
+                    TextStyle.SHORT, new Locale("es", "ES"));
+            meses.add(VentasMensualesResponse.MesVentas.builder()
+                    .anio(ym.getYear())
+                    .mes(ym.getMonthValue())
+                    .etiqueta(abrev + " " + ym.getYear())
+                    .total(total)
+                    .build());
+        }
+
+        return VentasMensualesResponse.builder()
+                .mesesConsiderados(cantMeses)
+                .totalPeriodo(totalPeriodo)
+                .meses(meses)
+                .updatedAt(ahora)
+                .build();
+    }
+
+    private InventoryMovementResponse toMovementResponse(MovimientoInventario m) {        String type = "ingreso".equals(m.getTipo()) ? "entrada" : "salida";
         String motivo = m.getMotivo() != null ? m.getMotivo().toLowerCase() : "";
         if (motivo.contains("transferencia")) {
             type = "transferencia";

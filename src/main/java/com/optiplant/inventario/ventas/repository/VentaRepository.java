@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 public interface VentaRepository extends JpaRepository<Venta, Long>,
@@ -24,4 +25,10 @@ public interface VentaRepository extends JpaRepository<Venta, Long>,
             + "WHERE v.fecha >= :desde AND v.fecha < :hasta")
     BigDecimal sumTotalEntre(@Param("desde") LocalDateTime desde,
                              @Param("hasta") LocalDateTime hasta);
+
+    @Query("SELECT YEAR(v.fecha) AS anio, MONTH(v.fecha) AS mes, COALESCE(SUM(v.total), 0) "
+            + "FROM Venta v WHERE v.fecha >= :desde "
+            + "GROUP BY YEAR(v.fecha), MONTH(v.fecha) "
+            + "ORDER BY anio ASC, mes ASC")
+    List<Object[]> sumTotalPorMesDesde(@Param("desde") LocalDateTime desde);
 }

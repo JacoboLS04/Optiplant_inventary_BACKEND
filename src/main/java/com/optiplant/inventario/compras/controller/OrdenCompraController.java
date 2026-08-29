@@ -35,9 +35,11 @@ public class OrdenCompraController {
             @RequestParam(required = false) Long sucursalId,
             @RequestParam(required = false) EstadoOrdenCompra estado,
             @RequestParam(required = false) String busqueda,
+            @RequestParam(required = false) Long productoId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(service.buscar(sucursalId, estado, busqueda, page, size));
+        return ResponseEntity.ok(
+                service.buscar(sucursalId, estado, busqueda, productoId, page, size));
     }
 
     @GetMapping("/{id}")

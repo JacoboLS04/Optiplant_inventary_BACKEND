@@ -113,7 +113,8 @@ public class OrdenCompraService {
 
     @Transactional(readOnly = true)
     public PaginatedResponse<OrdenCompraResponse> buscar(
-            Long sucursalId, EstadoOrdenCompra estado, String busqueda, int page, int size) {
+            Long sucursalId, EstadoOrdenCompra estado, String busqueda,
+            Long productoId, int page, int size) {
 
         Specification<OrdenCompra> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -132,6 +133,12 @@ public class OrdenCompraService {
 
             if (estado != null) {
                 predicates.add(cb.equal(root.get("estado"), estado));
+            }
+
+            if (productoId != null) {
+                query.distinct(true);
+                predicates.add(cb.equal(
+                        root.join("lineas").get("producto").get("id"), productoId));
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));

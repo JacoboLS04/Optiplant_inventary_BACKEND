@@ -3,6 +3,7 @@ package com.optiplant.inventario.inventario.service;
 import com.optiplant.inventario.common.dto.PaginatedResponse;
 import com.optiplant.inventario.common.exception.BusinessRuleException;
 import com.optiplant.inventario.common.exception.ResourceNotFoundException;
+import com.optiplant.inventario.common.security.UsuarioActualService;
 import com.optiplant.inventario.catalogo.entity.Producto;
 import com.optiplant.inventario.catalogo.entity.Sucursal;
 import com.optiplant.inventario.catalogo.repository.ProductoRepository;
@@ -39,6 +40,7 @@ public class MovimientoInventarioService {
     private final SucursalRepository sucursalRepository;
     private final UsuarioRepository usuarioRepository;
     private final MovimientoInventarioMapper mapper;
+    private final UsuarioActualService usuarioActualService;
 
     @Transactional
     public MovimientoInventarioResponse registrar(MovimientoInventarioRequest request) {
@@ -50,9 +52,12 @@ public class MovimientoInventarioService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Sucursal no encontrada: " + request.getSucursalId()));
 
-        if (!"ingreso".equals(request.getTipo()) && !"retiro".equals(request.getTipo())) {
+        usuarioActualService.validarAccesoSucursal(sucursal.getId());
+
+        if (!"ingreso".equals(request.getTipo()) && !"retiro".equals(request.getTipo())
+                && !"merma".equals(request.getTipo())) {
             throw new BusinessRuleException(
-                    "Tipo de movimiento inválido. Use 'ingreso' o 'retiro'.");
+                    "Tipo de movimiento inválido. Use 'ingreso', 'retiro' o 'merma'.");
         }
 
         Usuario usuario = resolveUsuario(request.getUsuarioId());
@@ -73,7 +78,8 @@ public class MovimientoInventarioService {
                     .build();
         }
 
-        if ("retiro".equals(request.getTipo())) {
+        boolean esSalida = "retiro".equals(request.getTipo()) || "merma".equals(request.getTipo());
+        if (esSalida) {
             BigDecimal nuevaCantidad = existencia.getCantidadFisica()
                     .subtract(request.getCantidad());
             if (nuevaCantidad.compareTo(BigDecimal.ZERO) < 0) {

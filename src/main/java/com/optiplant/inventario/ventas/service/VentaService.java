@@ -7,6 +7,7 @@ import com.optiplant.inventario.catalogo.service.PrecioService;
 import com.optiplant.inventario.common.dto.PaginatedResponse;
 import com.optiplant.inventario.common.exception.BusinessRuleException;
 import com.optiplant.inventario.common.exception.ResourceNotFoundException;
+import com.optiplant.inventario.common.security.UsuarioActualService;
 import com.optiplant.inventario.identidad.entity.Usuario;
 import com.optiplant.inventario.identidad.repository.UsuarioRepository;
 import com.optiplant.inventario.inventario.dto.MovimientoInventarioRequest;
@@ -51,6 +52,7 @@ public class VentaService {
     private final MovimientoInventarioService movimientoInventarioService;
     private final PrecioService precioService;
     private final VentaMapper mapper;
+    private final UsuarioActualService usuarioActualService;
 
     @Transactional(readOnly = true)
     public List<ProductoVentaResponse> catalogo() {
@@ -66,6 +68,8 @@ public class VentaService {
         Sucursal sucursal = sucursalRepository.findById(request.getSucursalId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Sucursal no encontrada: " + request.getSucursalId()));
+
+        usuarioActualService.validarAccesoSucursal(sucursal.getId());
 
         BigDecimal descuento = request.getDescuentoPorcentaje() != null
                 ? request.getDescuentoPorcentaje() : BigDecimal.ZERO;
