@@ -1,0 +1,19 @@
+target/
+.git
+.gitignore
+docs/
+*.iml
+.idea/
+.classpath
+.project
+.settings
+.vscode/
+
+# Archivos de despliegue/guías (no forman parte del artefacto backend)
+docker-compose.yml
+.env
+.env.*
+!.env.example
+README-deploy.md
+GUIA-DOCKER.md
+GUIA-PRUEBAS.md

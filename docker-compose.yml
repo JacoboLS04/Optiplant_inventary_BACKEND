@@ -1,0 +1,65 @@
+name: optiplant
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: optiplant-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-optiplant}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-optiplant}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - optiplant
+
+  backend:
+    build:
+      context: .
+    container_name: optiplant-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-optiplant}
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:8081}
+      JWT_SECRET: ${JWT_SECRET:-aW52ZW50YXJpb3Byb2R1Y2Npb25zZWNyZXRrbHlzd2Fja2tleWZvcmZyb250ZW5kb2NvTDEyMzQ1Ng==}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+    ports:
+      - "8080:8080"
+    networks:
+      - optiplant
+
+  frontend:
+    build:
+      context: ../Proyecto_Optiplant_front
+      args:
+        VITE_API_URL: /api
+    container_name: optiplant-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8081:80"
+    networks:
+      - optiplant
+
+volumes:
+  db-data:
+    name: optiplant-db-data
+
+networks:
+  optiplant:
+    name: optiplant-network
