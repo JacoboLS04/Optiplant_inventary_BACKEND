@@ -41,6 +41,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -173,6 +174,15 @@ public class TransferenciaService {
 
     @Transactional
     public TransferenciaResponse aprobar(Long id, TransferenciaAprobacionRequest request) {
+        // RF-064: solo el Gerente o el Administrador pueden aprobar/rechazar.
+        Usuario actual = resolveUsuario();
+        String rolActual = actual != null ? actual.getRol() : "";
+        if (!rolActual.equals("GERENTE") && !rolActual.equals("ADMINISTRADOR")) {
+            throw new AccessDeniedException(
+                    "Solo el Gerente o el Administrador pueden aprobar/rechazar "
+                            + "una transferencia (RF-064)");
+        }
+
         Transferencia transferencia = findOrThrow(id);
 
         if (request.getDecision() != DecisionAprobacion.APROBADO

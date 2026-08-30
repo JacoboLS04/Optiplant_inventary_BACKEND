@@ -1,0 +1,2279 @@
+openapi: 3.1.0
+info:
+  title: OptiPlant Inventario API
+  description: Sistema de Inventario Multi-Sucursal - OptiPlant
+  version: v1
+servers:
+- url: http://localhost:8080
+  description: Generated server url
+paths:
+  /api/v1/usuarios/{id}:
+    get:
+      tags:
+      - usuario-controller
+      operationId: obtener
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/UsuarioResponse'
+    put:
+      tags:
+      - usuario-controller
+      operationId: actualizar
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActualizarUsuarioRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/UsuarioResponse'
+  /api/v1/sucursales/{id}:
+    get:
+      tags:
+      - sucursal-controller
+      operationId: getById
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/SucursalResponse'
+    put:
+      tags:
+      - sucursal-controller
+      operationId: update
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SucursalRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/SucursalResponse'
+  /api/v1/proveedores/{id}:
+    get:
+      tags:
+      - proveedor-controller
+      operationId: obtener_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ProveedorResponse'
+    put:
+      tags:
+      - proveedor-controller
+      operationId: actualizar_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProveedorRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ProveedorResponse'
+    delete:
+      tags:
+      - proveedor-controller
+      operationId: eliminar
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+  /api/v1/productos/{id}:
+    get:
+      tags:
+      - producto-controller
+      operationId: getById_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ProductoResponse'
+    put:
+      tags:
+      - producto-controller
+      operationId: update_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductoRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ProductoResponse'
+  /api/v1/precios/{productoId}:
+    put:
+      tags:
+      - precio-controller
+      operationId: updatePrecio
+      parameters:
+      - name: productoId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrecioProductoRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/PrecioProductoResponse'
+  /api/v1/existencias/{id}:
+    put:
+      tags:
+      - existencia-controller
+      operationId: updateStockMinimo
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExistenciaUpdateRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ExistenciaResponse'
+  /api/v1/ventas:
+    get:
+      tags:
+      - venta-controller
+      operationId: buscar
+      parameters:
+      - name: sucursalId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: fechaDesde
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - name: fechaHasta
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - name: busqueda
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/PaginatedResponseVentaResponse'
+    post:
+      tags:
+      - venta-controller
+      operationId: registrar
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NuevaVentaRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/VentaResponse'
+  /api/v1/usuarios:
+    get:
+      tags:
+      - usuario-controller
+      operationId: listar
+      parameters:
+      - name: busqueda
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: rol
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: activo
+        in: query
+        required: false
+        schema:
+          type: boolean
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/PaginatedResponseUsuarioResponse'
+    post:
+      tags:
+      - usuario-controller
+      operationId: crear
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearUsuarioRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/UsuarioResponse'
+  /api/v1/transferencias:
+    get:
+      tags:
+      - transferencia-controller
+      operationId: buscar_1
+      parameters:
+      - name: sucursalOrigenId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: sucursalDestinoId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: estado
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - SOLICITADA
+          - RECHAZADA
+          - APROBADA
+          - EN_PREPARACION
+          - EN_TRANSITO
+          - RECIBIDA
+          - CON_FALTANTES
+          - CANCELADA
+      - name: busqueda
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/PaginatedResponseTransferenciaResponse'
+    post:
+      tags:
+      - transferencia-controller
+      operationId: crear_1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransferenciaRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/TransferenciaResponse'
+  /api/v1/transferencias/{id}/recepcion:
+    post:
+      tags:
+      - transferencia-controller
+      operationId: recibir
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransferenciaRecepcionRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/TransferenciaResponse'
+  /api/v1/transferencias/{id}/preparacion:
+    post:
+      tags:
+      - transferencia-controller
+      operationId: preparar
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/TransferenciaResponse'
+  /api/v1/transferencias/{id}/despacho:
+    post:
+      tags:
+      - transferencia-controller
+      operationId: despachar
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransferenciaDespachoRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/TransferenciaResponse'
+  /api/v1/transferencias/{id}/cancelacion:
+    post:
+      tags:
+      - transferencia-controller
+      operationId: cancelar
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/TransferenciaResponse'
+  /api/v1/transferencias/{id}/aprobacion:
+    post:
+      tags:
+      - transferencia-controller
+      operationId: aprobar
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransferenciaAprobacionRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/TransferenciaResponse'
+  /api/v1/sucursales:
+    get:
+      tags:
+      - sucursal-controller
+      operationId: findAll
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SucursalResponse'
+    post:
+      tags:
+      - sucursal-controller
+      operationId: create
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SucursalRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/SucursalResponse'
+  /api/v1/proveedores:
+    get:
+      tags:
+      - proveedor-controller
+      operationId: listar_1
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProveedorResponse'
+    post:
+      tags:
+      - proveedor-controller
+      operationId: crear_2
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProveedorRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ProveedorResponse'
+  /api/v1/productos:
+    get:
+      tags:
+      - producto-controller
+      operationId: search
+      parameters:
+      - name: search
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: categoriaId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/PaginatedResponseProductoResponse'
+    post:
+      tags:
+      - producto-controller
+      operationId: create_1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductoRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ProductoResponse'
+  /api/v1/precios:
+    post:
+      tags:
+      - precio-controller
+      operationId: setPrecio
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrecioProductoRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/PrecioProductoResponse'
+  /api/v1/ordenes-compra:
+    get:
+      tags:
+      - orden-compra-controller
+      operationId: buscar_2
+      parameters:
+      - name: sucursalId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: estado
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - BORRADOR
+          - ENVIADA
+          - EN_TRANSITO
+          - RECIBIDA
+          - CANCELADA
+      - name: busqueda
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: productoId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/PaginatedResponseOrdenCompraResponse'
+    post:
+      tags:
+      - orden-compra-controller
+      operationId: crear_3
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrdenCompraRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/OrdenCompraResponse'
+  /api/v1/ordenes-compra/{id}/recepcion:
+    post:
+      tags:
+      - orden-compra-controller
+      operationId: recibir_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrdenCompraRecepcionRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/OrdenCompraResponse'
+  /api/v1/ordenes-compra/{id}/estado:
+    post:
+      tags:
+      - orden-compra-controller
+      operationId: cambiarEstado
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrdenCompraEstadoRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/OrdenCompraResponse'
+  /api/v1/movimientos-inventario:
+    get:
+      tags:
+      - movimiento-inventario-controller
+      operationId: search_1
+      parameters:
+      - name: productoId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: sucursalId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/PaginatedResponseMovimientoInventarioResponse'
+    post:
+      tags:
+      - movimiento-inventario-controller
+      operationId: registrar_1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MovimientoInventarioRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/MovimientoInventarioResponse'
+  /api/v1/auth/logout:
+    post:
+      tags:
+      - auth-controller
+      operationId: logout
+      parameters:
+      - name: Authorization
+        in: header
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: string
+  /api/v1/auth/login:
+    post:
+      tags:
+      - auth-controller
+      operationId: login
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+  /api/v1/usuarios/{id}/estado:
+    patch:
+      tags:
+      - usuario-controller
+      operationId: cambiarEstado_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsuarioEstadoRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/UsuarioResponse'
+  /api/v1/sucursales/{id}/estado:
+    patch:
+      tags:
+      - sucursal-controller
+      operationId: inactivar
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/SucursalResponse'
+  /api/v1/productos/{id}/estado:
+    patch:
+      tags:
+      - producto-controller
+      operationId: inactivar_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ProductoResponse'
+  /api/v1/ventas/{id}:
+    get:
+      tags:
+      - venta-controller
+      operationId: obtener_2
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/VentaResponse'
+  /api/v1/ventas/catalogo:
+    get:
+      tags:
+      - venta-controller
+      operationId: catalogo
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductoVentaResponse'
+  /api/v1/unidades-medida:
+    get:
+      tags:
+      - unidad-medida-controller
+      operationId: findAll_1
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UnidadMedidaResponse'
+  /api/v1/transferencias/{id}:
+    get:
+      tags:
+      - transferencia-controller
+      operationId: obtener_3
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/TransferenciaResponse'
+  /api/v1/ordenes-compra/{id}:
+    get:
+      tags:
+      - orden-compra-controller
+      operationId: obtener_4
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/OrdenCompraResponse'
+  /api/v1/health:
+    get:
+      tags:
+      - health-check-controller
+      operationId: health
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+  /api/v1/existencias:
+    get:
+      tags:
+      - existencia-controller
+      operationId: search_2
+      parameters:
+      - name: search
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: categoriaId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: sucursalId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: estadoStock
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: actualizadoDesde
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - name: actualizadoHasta
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/PaginatedResponseExistenciaResponse'
+  /api/v1/dashboard/ventas-mensuales:
+    get:
+      tags:
+      - dashboard-controller
+      operationId: ventasMensuales
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/VentasMensualesResponse'
+  /api/v1/dashboard/rotacion:
+    get:
+      tags:
+      - dashboard-controller
+      operationId: rotacion
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/RotacionResponse'
+  /api/v1/dashboard/resumen:
+    get:
+      tags:
+      - dashboard-controller
+      operationId: resumen
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/InventorySummaryResponse'
+  /api/v1/dashboard/red:
+    get:
+      tags:
+      - dashboard-controller
+      operationId: red
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/BranchNetworkResponse'
+  /api/v1/dashboard/movimientos:
+    get:
+      tags:
+      - dashboard-controller
+      operationId: movimientos
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InventoryMovementResponse'
+  /api/v1/categorias:
+    get:
+      tags:
+      - categoria-controller
+      operationId: findAll_2
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoriaResponse'
+components:
+  schemas:
+    ActualizarUsuarioRequest:
+      type: object
+      properties:
+        nombre:
+          type: string
+          minLength: 1
+        rol:
+          type: string
+          minLength: 1
+        sucursalId:
+          type: integer
+          format: int64
+        password:
+          type: string
+          maxLength: 2147483647
+          minLength: 6
+    UsuarioResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        email:
+          type: string
+        nombre:
+          type: string
+        rol:
+          type: string
+        sucursalId:
+          type: integer
+          format: int64
+        sucursalNombre:
+          type: string
+        activo:
+          type: boolean
+    SucursalRequest:
+      type: object
+      properties:
+        nombre:
+          type: string
+          minLength: 1
+        direccion:
+          type: string
+    SucursalResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        nombre:
+          type: string
+        direccion:
+          type: string
+        estado:
+          type: string
+    ProveedorRequest:
+      type: object
+      properties:
+        nombre:
+          type: string
+          maxLength: 200
+          minLength: 0
+        contacto:
+          type: string
+          maxLength: 200
+          minLength: 0
+        condicionesGenerales:
+          type: string
+    ProveedorResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        nombre:
+          type: string
+        contacto:
+          type: string
+        condicionesGenerales:
+          type: string
+    ProductoRequest:
+      type: object
+      properties:
+        nombre:
+          type: string
+          minLength: 1
+        descripcion:
+          type: string
+        categoriaId:
+          type: integer
+          format: int64
+        unidadBaseId:
+          type: integer
+          format: int64
+        sku:
+          type: string
+      required:
+      - categoriaId
+      - unidadBaseId
+    ProductoResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        sku:
+          type: string
+        nombre:
+          type: string
+        descripcion:
+          type: string
+        categoriaId:
+          type: integer
+          format: int64
+        categoriaNombre:
+          type: string
+        unidadBaseId:
+          type: integer
+          format: int64
+        estado:
+          type: string
+    PrecioProductoRequest:
+      type: object
+      properties:
+        productoId:
+          type: integer
+          format: int64
+        precio:
+          type: number
+      required:
+      - precio
+      - productoId
+    PrecioProductoResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        productoId:
+          type: integer
+          format: int64
+        sku:
+          type: string
+        nombreProducto:
+          type: string
+        precio:
+          type: number
+    ExistenciaUpdateRequest:
+      type: object
+      properties:
+        stockMinimo:
+          type: number
+      required:
+      - stockMinimo
+    ExistenciaResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        productoId:
+          type: integer
+          format: int64
+        sku:
+          type: string
+        nombreProducto:
+          type: string
+        sucursalId:
+          type: integer
+          format: int64
+        nombreSucursal:
+          type: string
+        cantidadFisica:
+          type: number
+        cantidadReservada:
+          type: number
+        cantidadDisponible:
+          type: number
+        stockMinimo:
+          type: number
+        estadoStock:
+          type: string
+        precio:
+          type: number
+        updatedAt:
+          type: string
+          format: date-time
+    LineaRequest:
+      type: object
+      properties:
+        productoId:
+          type: integer
+          format: int64
+        cantidad:
+          type: number
+          minimum: 0.01
+      required:
+      - cantidad
+      - productoId
+    NuevaVentaRequest:
+      type: object
+      properties:
+        sucursalId:
+          type: integer
+          format: int64
+        descuentoPorcentaje:
+          type: number
+          maximum: 100
+          minimum: 0
+        lineas:
+          type: array
+          items:
+            $ref: '#/components/schemas/LineaRequest'
+          minItems: 1
+      required:
+      - descuentoPorcentaje
+      - sucursalId
+    LineaResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        productoId:
+          type: integer
+          format: int64
+        sku:
+          type: string
+        nombreProducto:
+          type: string
+        cantidad:
+          type: number
+        precioUnitario:
+          type: number
+        descuento:
+          type: number
+        subtotal:
+          type: number
+    VentaResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        codigo:
+          type: string
+        sucursalId:
+          type: integer
+          format: int64
+        nombreSucursal:
+          type: string
+        usuarioId:
+          type: integer
+          format: int64
+        nombreUsuario:
+          type: string
+        descuentoPorcentaje:
+          type: number
+        subtotal:
+          type: number
+        total:
+          type: number
+        unidades:
+          type: number
+        fecha:
+          type: string
+          format: date-time
+        lineas:
+          type: array
+          items:
+            $ref: '#/components/schemas/LineaResponse'
+    CrearUsuarioRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          maxLength: 2147483647
+          minLength: 6
+        nombre:
+          type: string
+          minLength: 1
+        rol:
+          type: string
+          minLength: 1
+        sucursalId:
+          type: integer
+          format: int64
+    TransferenciaRequest:
+      type: object
+      properties:
+        sucursalOrigenId:
+          type: integer
+          format: int64
+        sucursalDestinoId:
+          type: integer
+          format: int64
+        urgencia:
+          type: string
+          enum:
+          - BAJA
+          - NORMAL
+          - ALTA
+          - CRITICA
+        transportista:
+          type: string
+        guia:
+          type: string
+        fechaEstimadaLlegada:
+          type: string
+          format: date-time
+        lineas:
+          type: array
+          items:
+            $ref: '#/components/schemas/LineaRequest'
+          minItems: 1
+      required:
+      - sucursalDestinoId
+      - sucursalOrigenId
+    AprobacionResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        gerenteId:
+          type: integer
+          format: int64
+        nombreGerente:
+          type: string
+        rolAprobacion:
+          type: string
+        decision:
+          type: string
+        fecha:
+          type: string
+          format: date-time
+        observacion:
+          type: string
+    TransferenciaResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        codigo:
+          type: string
+        sucursalOrigenId:
+          type: integer
+          format: int64
+        nombreSucursalOrigen:
+          type: string
+        sucursalDestinoId:
+          type: integer
+          format: int64
+        nombreSucursalDestino:
+          type: string
+        usuarioSolicitanteId:
+          type: integer
+          format: int64
+        nombreUsuarioSolicitante:
+          type: string
+        urgencia:
+          type: string
+          enum:
+          - BAJA
+          - NORMAL
+          - ALTA
+          - CRITICA
+        transportista:
+          type: string
+        guia:
+          type: string
+        fechaEstimadaLlegada:
+          type: string
+          format: date-time
+        estado:
+          type: string
+          enum:
+          - SOLICITADA
+          - RECHAZADA
+          - APROBADA
+          - EN_PREPARACION
+          - EN_TRANSITO
+          - RECIBIDA
+          - CON_FALTANTES
+          - CANCELADA
+        fechaSolicitud:
+          type: string
+          format: date-time
+        fechaDespacho:
+          type: string
+          format: date-time
+        fechaRecepcion:
+          type: string
+          format: date-time
+        totalUnidades:
+          type: number
+        lineas:
+          type: array
+          items:
+            $ref: '#/components/schemas/LineaResponse'
+        aprobaciones:
+          type: array
+          items:
+            $ref: '#/components/schemas/AprobacionResponse'
+    LineaRecepcion:
+      type: object
+      properties:
+        transferenciaLineaId:
+          type: integer
+          format: int64
+        cantidadRecibida:
+          type: number
+          minimum: 0.0
+        tratamiento:
+          type: string
+          enum:
+          - REENVIO
+          - AJUSTE
+          - RECLAMACION
+      required:
+      - cantidadRecibida
+      - transferenciaLineaId
+    TransferenciaRecepcionRequest:
+      type: object
+      properties:
+        lineas:
+          type: array
+          items:
+            $ref: '#/components/schemas/LineaRecepcion'
+          minItems: 1
+    LineaDespacho:
+      type: object
+      properties:
+        transferenciaLineaId:
+          type: integer
+          format: int64
+        cantidadDespachada:
+          type: number
+          minimum: 0.01
+      required:
+      - cantidadDespachada
+      - transferenciaLineaId
+    TransferenciaDespachoRequest:
+      type: object
+      properties:
+        lineas:
+          type: array
+          items:
+            $ref: '#/components/schemas/LineaDespacho'
+          minItems: 1
+        transportista:
+          type: string
+          maxLength: 200
+          minLength: 0
+        guia:
+          type: string
+          maxLength: 100
+          minLength: 0
+    TransferenciaAprobacionRequest:
+      type: object
+      properties:
+        gerenteId:
+          type: integer
+          format: int64
+        rolAprobacion:
+          type: string
+          enum:
+          - ORIGEN
+          - DESTINO
+        decision:
+          type: string
+          enum:
+          - APROBADO
+          - RECHAZADO
+        observacion:
+          type: string
+          maxLength: 500
+          minLength: 0
+      required:
+      - decision
+      - gerenteId
+      - rolAprobacion
+    OrdenCompraLineaRequest:
+      type: object
+      properties:
+        productoId:
+          type: integer
+          format: int64
+        cantidadOrdenada:
+          type: number
+          minimum: 0.01
+        precioUnitario:
+          type: number
+          minimum: 0.0
+        descuento:
+          type: number
+          minimum: 0.0
+      required:
+      - cantidadOrdenada
+      - precioUnitario
+      - productoId
+    OrdenCompraRequest:
+      type: object
+      properties:
+        proveedorId:
+          type: integer
+          format: int64
+        sucursalDestinoId:
+          type: integer
+          format: int64
+        fechaEntregaEstimada:
+          type: string
+          format: date
+        transportista:
+          type: string
+          maxLength: 200
+          minLength: 0
+        guia:
+          type: string
+          maxLength: 100
+          minLength: 0
+        condicionesPago:
+          type: string
+          maxLength: 300
+          minLength: 0
+        lineas:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrdenCompraLineaRequest'
+          maxItems: 2147483647
+          minItems: 1
+      required:
+      - lineas
+      - proveedorId
+      - sucursalDestinoId
+    OrdenCompraResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        codigo:
+          type: string
+        proveedorId:
+          type: integer
+          format: int64
+        nombreProveedor:
+          type: string
+        sucursalDestinoId:
+          type: integer
+          format: int64
+        nombreSucursal:
+          type: string
+        usuarioId:
+          type: integer
+          format: int64
+        nombreUsuario:
+          type: string
+        estado:
+          type: string
+          enum:
+          - BORRADOR
+          - ENVIADA
+          - EN_TRANSITO
+          - RECIBIDA
+          - CANCELADA
+        fechaEmision:
+          type: string
+          format: date-time
+        fechaEntregaEstimada:
+          type: string
+          format: date
+        transportista:
+          type: string
+        guia:
+          type: string
+        condicionesPago:
+          type: string
+        total:
+          type: number
+        lineas:
+          type: array
+          items:
+            $ref: '#/components/schemas/LineaResponse'
+    OrdenCompraRecepcionRequest:
+      type: object
+      properties:
+        lineas:
+          type: array
+          items:
+            $ref: '#/components/schemas/LineaRecepcion'
+      required:
+      - lineas
+    OrdenCompraEstadoRequest:
+      type: object
+      properties:
+        estado:
+          type: string
+          enum:
+          - BORRADOR
+          - ENVIADA
+          - EN_TRANSITO
+          - RECIBIDA
+          - CANCELADA
+      required:
+      - estado
+    MovimientoInventarioRequest:
+      type: object
+      properties:
+        productoId:
+          type: integer
+          format: int64
+        sucursalId:
+          type: integer
+          format: int64
+        tipo:
+          type: string
+          minLength: 1
+        motivo:
+          type: string
+          minLength: 1
+        cantidad:
+          type: number
+          minimum: 0.01
+        usuarioId:
+          type: integer
+          format: int64
+      required:
+      - cantidad
+      - productoId
+      - sucursalId
+    MovimientoInventarioResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        productoId:
+          type: integer
+          format: int64
+        sku:
+          type: string
+        nombreProducto:
+          type: string
+        sucursalId:
+          type: integer
+          format: int64
+        nombreSucursal:
+          type: string
+        tipo:
+          type: string
+        motivo:
+          type: string
+        cantidad:
+          type: number
+        usuarioId:
+          type: integer
+          format: int64
+        nombreUsuario:
+          type: string
+        fecha:
+          type: string
+          format: date-time
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        tipo:
+          type: string
+        usuarioId:
+          type: integer
+          format: int64
+        email:
+          type: string
+        nombre:
+          type: string
+        rol:
+          type: string
+    UsuarioEstadoRequest:
+      type: object
+      properties:
+        activo:
+          type: boolean
+      required:
+      - activo
+    PaginatedResponseVentaResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/VentaResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+    ProductoVentaResponse:
+      type: object
+      properties:
+        productoId:
+          type: integer
+          format: int64
+        sku:
+          type: string
+        nombre:
+          type: string
+        categoriaId:
+          type: integer
+          format: int64
+        categoria:
+          type: string
+        sucursalId:
+          type: integer
+          format: int64
+        sucursal:
+          type: string
+        precioUnitario:
+          type: number
+        stockDisponible:
+          type: number
+    PaginatedResponseUsuarioResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/UsuarioResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+    UnidadMedidaResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        nombre:
+          type: string
+        simbolo:
+          type: string
+    PaginatedResponseTransferenciaResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransferenciaResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+    PaginatedResponseProductoResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductoResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+    PaginatedResponseOrdenCompraResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrdenCompraResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+    PaginatedResponseMovimientoInventarioResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/MovimientoInventarioResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+    PaginatedResponseExistenciaResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExistenciaResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+    MesVentas:
+      type: object
+      properties:
+        anio:
+          type: integer
+          format: int32
+        mes:
+          type: integer
+          format: int32
+        etiqueta:
+          type: string
+        total:
+          type: number
+    VentasMensualesResponse:
+      type: object
+      properties:
+        mesesConsiderados:
+          type: integer
+          format: int32
+        totalPeriodo:
+          type: number
+        meses:
+          type: array
+          items:
+            $ref: '#/components/schemas/MesVentas'
+        updatedAt:
+          type: string
+          format: date-time
+    ProductoRotacion:
+      type: object
+      properties:
+        productoId:
+          type: integer
+          format: int64
+        sku:
+          type: string
+        nombre:
+          type: string
+        unidades:
+          type: number
+        stockActual:
+          type: number
+        rotacion:
+          type: number
+    RotacionResponse:
+      type: object
+      properties:
+        periodoDias:
+          type: integer
+          format: int32
+        totalUnidades:
+          type: number
+        altaDemanda:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductoRotacion'
+        bajaDemanda:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductoRotacion'
+        updatedAt:
+          type: string
+          format: date-time
+    CategoryDistribution:
+      type: object
+      properties:
+        category:
+          type: string
+        units:
+          type: number
+        value:
+          type: number
+    InventorySummaryResponse:
+      type: object
+      properties:
+        summary:
+          $ref: '#/components/schemas/Summary'
+        distribution:
+          type: array
+          items:
+            $ref: '#/components/schemas/CategoryDistribution'
+    Summary:
+      type: object
+      properties:
+        totalValue:
+          type: number
+        totalUnits:
+          type: number
+        skuCount:
+          type: integer
+          format: int64
+        branchCount:
+          type: integer
+          format: int64
+        inflowValue30d:
+          type: number
+        outflowValue30d:
+          type: number
+        changePercent:
+          type: number
+        updatedAt:
+          type: string
+          format: date-time
+    BranchLink:
+      type: object
+      properties:
+        from:
+          type: integer
+          format: int64
+        to:
+          type: integer
+          format: int64
+        status:
+          type: string
+    BranchNetworkResponse:
+      type: object
+      properties:
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/BranchNode'
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/BranchLink'
+        alerts:
+          type: array
+          items:
+            $ref: '#/components/schemas/StockAlert'
+        updatedAt:
+          type: string
+          format: date-time
+    BranchNode:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        kind:
+          type: string
+        status:
+          type: string
+        units:
+          type: number
+        skuCount:
+          type: integer
+          format: int64
+        lowStockCount:
+          type: integer
+          format: int64
+        x:
+          type: number
+        y:
+          type: number
+    StockAlert:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        product:
+          type: string
+        branchId:
+          type: integer
+          format: int64
+        branchName:
+          type: string
+        currentUnits:
+          type: number
+        minUnits:
+          type: number
+        severity:
+          type: string
+    InventoryMovementResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        product:
+          type: string
+        sku:
+          type: string
+        type:
+          type: string
+        branch:
+          type: string
+        quantity:
+          type: number
+        date:
+          type: string
+          format: date-time
+    CategoriaResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        nombre:
+          type: string

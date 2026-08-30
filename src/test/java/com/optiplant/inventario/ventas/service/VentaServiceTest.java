@@ -5,6 +5,7 @@ import com.optiplant.inventario.catalogo.entity.Producto;
 import com.optiplant.inventario.catalogo.entity.Sucursal;
 import com.optiplant.inventario.common.exception.BusinessRuleException;
 import com.optiplant.inventario.common.security.UsuarioActualService;
+import org.springframework.security.access.AccessDeniedException;
 import com.optiplant.inventario.inventario.entity.Existencia;
 import com.optiplant.inventario.inventario.repository.ExistenciaRepository;
 import com.optiplant.inventario.inventario.service.MovimientoInventarioService;
@@ -25,6 +26,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -129,5 +131,22 @@ class VentaServiceTest {
                 .build();
 
         assertThrows(BusinessRuleException.class, () -> service.registrar(request));
+    }
+
+    @Test
+    void registrarRechazaAccesoASucursalAjena() {
+        Sucursal s = sucursal();
+        when(sucursalRepository.findById(1L)).thenReturn(Optional.of(s));
+        doThrow(new AccessDeniedException("RF-009"))
+                .when(usuarioActualService).validarAccesoSucursal(1L);
+
+        NuevaVentaRequest request = NuevaVentaRequest.builder()
+                .sucursalId(1L)
+                .descuentoPorcentaje(BigDecimal.ZERO)
+                .lineas(List.of(NuevaVentaRequest.LineaRequest.builder()
+                        .productoId(10L).cantidad(BigDecimal.valueOf(1)).build()))
+                .build();
+
+        assertThrows(AccessDeniedException.class, () -> service.registrar(request));
     }
 }
