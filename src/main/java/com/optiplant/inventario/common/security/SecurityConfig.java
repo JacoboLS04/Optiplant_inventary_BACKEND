@@ -42,7 +42,8 @@ public class SecurityConfig {
                         .hasRole("ADMINISTRADOR")
                         .requestMatchers("/api/v1/health").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**",
-                                "/swagger-ui.html", "/api/v1/docs/**").permitAll()
+                                "/swagger-ui.html", "/api/v1/docs/**",
+                                "/api/v1/swagger-ui.html", "/api/v1/swagger-ui/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex
