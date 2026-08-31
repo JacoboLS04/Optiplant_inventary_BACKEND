@@ -60,6 +60,9 @@ public class Venta {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "medio_pago", length = 50)
+    private String medioPago;
+
     @OneToMany(mappedBy = "venta", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<VentaLinea> lineas = new ArrayList<>();

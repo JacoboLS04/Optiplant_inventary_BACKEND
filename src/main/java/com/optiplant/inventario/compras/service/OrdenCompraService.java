@@ -7,6 +7,7 @@ import com.optiplant.inventario.catalogo.entity.Producto;
 import com.optiplant.inventario.catalogo.entity.Sucursal;
 import com.optiplant.inventario.catalogo.repository.ProductoRepository;
 import com.optiplant.inventario.catalogo.repository.SucursalRepository;
+import com.optiplant.inventario.compras.dto.DespachoRequest;
 import com.optiplant.inventario.compras.dto.OrdenCompraEstadoRequest;
 import com.optiplant.inventario.compras.dto.OrdenCompraRecepcionRequest;
 import com.optiplant.inventario.compras.dto.OrdenCompraRequest;
@@ -30,6 +31,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -57,6 +59,8 @@ public class OrdenCompraService {
         TRANSICIONES.put(EstadoOrdenCompra.BORRADOR,
                 List.of(EstadoOrdenCompra.ENVIADA, EstadoOrdenCompra.CANCELADA));
         TRANSICIONES.put(EstadoOrdenCompra.ENVIADA,
+                List.of(EstadoOrdenCompra.CONFIRMADA, EstadoOrdenCompra.CANCELADA));
+        TRANSICIONES.put(EstadoOrdenCompra.CONFIRMADA,
                 List.of(EstadoOrdenCompra.EN_TRANSITO, EstadoOrdenCompra.CANCELADA));
         TRANSICIONES.put(EstadoOrdenCompra.EN_TRANSITO,
                 List.of(EstadoOrdenCompra.RECIBIDA));
@@ -65,7 +69,7 @@ public class OrdenCompraService {
     }
 
     private static final List<EstadoOrdenCompra> ESTADOS_RECEPCIONABLES =
-            List.of(EstadoOrdenCompra.ENVIADA, EstadoOrdenCompra.EN_TRANSITO);
+            List.of(EstadoOrdenCompra.EN_TRANSITO);
 
     private final OrdenCompraRepository ordenCompraRepository;
     private final ProveedorRepository proveedorRepository;
@@ -161,8 +165,87 @@ public class OrdenCompraService {
     public OrdenCompraResponse cambiarEstado(Long id, OrdenCompraEstadoRequest request) {
         OrdenCompra orden = findOrThrow(id);
         EstadoOrdenCompra destino = request.getEstado();
+
+        if (destino == EstadoOrdenCompra.CONFIRMADA || destino == EstadoOrdenCompra.EN_TRANSITO) {
+            throw new BusinessRuleException(
+                    "El paso a " + destino + " es responsabilidad del proveedor (portal de proveedor).");
+        }
+
         validarTransicion(orden.getEstado(), destino);
         orden.setEstado(destino);
+        return mapper.toResponse(ordenCompraRepository.save(orden));
+    }
+
+    @Transactional(readOnly = true)
+    public List<OrdenCompraResponse> listarParaProveedor(
+            EstadoOrdenCompra estado, String busqueda) {
+
+        Proveedor proveedor = resolverProveedorActual();
+        Specification<OrdenCompra> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.equal(root.get("proveedor").get("id"), proveedor.getId()));
+
+            if (estado != null) {
+                predicates.add(cb.equal(root.get("estado"), estado));
+            }
+            if (busqueda != null && !busqueda.isBlank()) {
+                String patron = "%" + busqueda.trim().toLowerCase() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("codigo")), patron),
+                        cb.equal(root.get("sucursalDestino").get("nombre"), busqueda.trim())
+                ));
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        return ordenCompraRepository.findAll(spec,
+                        Sort.by(Sort.Direction.DESC, "fechaEmision"))
+                .stream().map(mapper::toResponse).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public OrdenCompraResponse obtenerParaProveedor(Long id) {
+        Proveedor proveedor = resolverProveedorActual();
+        OrdenCompra orden = findOrThrow(id);
+        validarPerteneceAProveedor(orden, proveedor);
+        return mapper.toResponse(orden);
+    }
+
+    @Transactional
+    public OrdenCompraResponse confirmar(Long id) {
+        Proveedor proveedor = resolverProveedorActual();
+        OrdenCompra orden = findOrThrow(id);
+        validarPerteneceAProveedor(orden, proveedor);
+
+        if (orden.getEstado() != EstadoOrdenCompra.ENVIADA) {
+            throw new BusinessRuleException(
+                    "Solo se puede confirmar una orden ENVIADA. Estado actual: " + orden.getEstado());
+        }
+        orden.setEstado(EstadoOrdenCompra.CONFIRMADA);
+        return mapper.toResponse(ordenCompraRepository.save(orden));
+    }
+
+    @Transactional
+    public OrdenCompraResponse despachar(Long id, DespachoRequest request) {
+        Proveedor proveedor = resolverProveedorActual();
+        OrdenCompra orden = findOrThrow(id);
+        validarPerteneceAProveedor(orden, proveedor);
+
+        if (orden.getEstado() != EstadoOrdenCompra.CONFIRMADA) {
+            throw new BusinessRuleException(
+                    "Solo se puede despachar una orden CONFIRMADA. Estado actual: " + orden.getEstado());
+        }
+
+        if (request.getTransportista() != null && !request.getTransportista().isBlank()) {
+            orden.setTransportista(request.getTransportista());
+        }
+        if (request.getGuia() != null && !request.getGuia().isBlank()) {
+            orden.setGuia(request.getGuia());
+        }
+        if (request.getFechaEntregaEstimada() != null) {
+            orden.setFechaEntregaEstimada(request.getFechaEntregaEstimada());
+        }
+        orden.setEstado(EstadoOrdenCompra.EN_TRANSITO);
         return mapper.toResponse(ordenCompraRepository.save(orden));
     }
 
@@ -172,7 +255,8 @@ public class OrdenCompraService {
 
         if (!ESTADOS_RECEPCIONABLES.contains(orden.getEstado())) {
             throw new BusinessRuleException(
-                    "La orden solo puede recibirse desde los estados: ENVIADA o EN_TRANSITO. "
+                    "La orden solo puede recibirse desde el estado EN_TRANSITO "
+                            + "(cuando el proveedor la ha despachado). "
                             + "Estado actual: " + orden.getEstado());
         }
 
@@ -293,6 +377,22 @@ public class OrdenCompraService {
             return usuarioRepository.findById(id).orElse(null);
         }
         return null;
+    }
+
+    private Proveedor resolverProveedorActual() {
+        Usuario usuario = resolveUsuario();
+        if (usuario == null || usuario.getProveedor() == null) {
+            throw new AccessDeniedException(
+                    "El usuario autenticado no está vinculado a ningún proveedor.");
+        }
+        return usuario.getProveedor();
+    }
+
+    private void validarPerteneceAProveedor(OrdenCompra orden, Proveedor proveedor) {
+        if (!proveedor.getId().equals(orden.getProveedor().getId())) {
+            throw new AccessDeniedException(
+                    "La orden " + orden.getCodigo() + " no pertenece a tu proveedor.");
+        }
     }
 
     private Long resolverIdUsuario() {

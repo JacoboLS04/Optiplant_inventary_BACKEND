@@ -5,6 +5,8 @@ import com.optiplant.inventario.catalogo.repository.SucursalRepository;
 import com.optiplant.inventario.common.dto.PaginatedResponse;
 import com.optiplant.inventario.common.exception.BusinessRuleException;
 import com.optiplant.inventario.common.exception.ResourceNotFoundException;
+import com.optiplant.inventario.compras.entity.Proveedor;
+import com.optiplant.inventario.compras.repository.ProveedorRepository;
 import com.optiplant.inventario.identidad.dto.ActualizarUsuarioRequest;
 import com.optiplant.inventario.identidad.dto.CrearUsuarioRequest;
 import com.optiplant.inventario.identidad.dto.UsuarioEstadoRequest;
@@ -30,10 +32,11 @@ import java.util.Set;
 public class UsuarioService {
 
     public static final Set<String> ROLES_VALIDOS =
-            Set.of("ADMINISTRADOR", "GERENTE", "OPERADOR");
+            Set.of("ADMINISTRADOR", "GERENTE", "OPERADOR", "PROVEEDOR");
 
     private final UsuarioRepository usuarioRepository;
     private final SucursalRepository sucursalRepository;
+    private final ProveedorRepository proveedorRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
@@ -44,6 +47,7 @@ public class UsuarioService {
 
         validarRol(request.getRol());
         Sucursal sucursal = resolverSucursalObligatoria(request.getRol(), request.getSucursalId());
+        Proveedor proveedor = resolverProveedorObligatorio(request.getRol(), request.getProveedorId());
 
         Usuario usuario = Usuario.builder()
                 .email(request.getEmail().trim().toLowerCase())
@@ -51,6 +55,7 @@ public class UsuarioService {
                 .nombre(request.getNombre())
                 .rol(rolNormalizado(request.getRol()))
                 .sucursal(sucursal)
+                .proveedor(proveedor)
                 .activo(true)
                 .build();
 
@@ -100,10 +105,12 @@ public class UsuarioService {
 
         validarRol(request.getRol());
         Sucursal sucursal = resolverSucursalObligatoria(request.getRol(), request.getSucursalId());
+        Proveedor proveedor = resolverProveedorObligatorio(request.getRol(), request.getProveedorId());
 
         usuario.setNombre(request.getNombre());
         usuario.setRol(rolNormalizado(request.getRol()));
         usuario.setSucursal(sucursal);
+        usuario.setProveedor(proveedor);
 
         if (request.getPassword() != null && !request.getPassword().isBlank()) {
             usuario.setPassword(passwordEncoder.encode(request.getPassword()));
@@ -134,10 +141,10 @@ public class UsuarioService {
     private Sucursal resolverSucursalObligatoria(String rol, Long sucursalId) {
         String rolNorm = rolNormalizado(rol);
 
-        if ("ADMINISTRADOR".equals(rolNorm)) {
+        if ("ADMINISTRADOR".equals(rolNorm) || "PROVEEDOR".equals(rolNorm)) {
             if (sucursalId != null) {
                 throw new BusinessRuleException(
-                        "El rol ADMINISTRADOR no se asocia a una sucursal específica.");
+                        "El rol " + rolNorm + " no se asocia a una sucursal específica.");
             }
             return null;
         }
@@ -149,6 +156,26 @@ public class UsuarioService {
         return sucursalRepository.findById(sucursalId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Sucursal no encontrada: " + sucursalId));
+    }
+
+    private Proveedor resolverProveedorObligatorio(String rol, Long proveedorId) {
+        String rolNorm = rolNormalizado(rol);
+
+        if ("PROVEEDOR".equals(rolNorm)) {
+            if (proveedorId == null) {
+                throw new BusinessRuleException(
+                        "El rol PROVEEDOR requiere un proveedor asociado.");
+            }
+            return proveedorRepository.findById(proveedorId)
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Proveedor no encontrado: " + proveedorId));
+        }
+
+        if (proveedorId != null) {
+            throw new BusinessRuleException(
+                    "El rol " + rolNorm + " no se asocia a un proveedor.");
+        }
+        return null;
     }
 
     private Usuario findOrThrow(Long id) {
@@ -164,6 +191,8 @@ public class UsuarioService {
                 .rol(usuario.getRol())
                 .sucursalId(usuario.getSucursal() != null ? usuario.getSucursal().getId() : null)
                 .sucursalNombre(usuario.getSucursal() != null ? usuario.getSucursal().getNombre() : null)
+                .proveedorId(usuario.getProveedor() != null ? usuario.getProveedor().getId() : null)
+                .proveedorNombre(usuario.getProveedor() != null ? usuario.getProveedor().getNombre() : null)
                 .activo(usuario.getActivo() != null ? usuario.getActivo() : true)
                 .build();
     }

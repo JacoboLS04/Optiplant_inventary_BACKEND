@@ -40,6 +40,12 @@ public class SecurityConfig {
                         .hasRole("ADMINISTRADOR")
                         .requestMatchers("/api/v1/dashboard/red")
                         .hasRole("ADMINISTRADOR")
+                        .requestMatchers("/api/v1/portal/**")
+                        .hasRole("PROVEEDOR")
+                        .requestMatchers("/api/v1/ordenes-compra/**")
+                        .hasAnyRole("ADMINISTRADOR", "GERENTE", "OPERADOR")
+                        .requestMatchers("/api/v1/proveedores/**")
+                        .hasAnyRole("ADMINISTRADOR", "GERENTE", "OPERADOR")
                         .requestMatchers("/api/v1/health").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**",
                                 "/swagger-ui.html", "/api/v1/docs/**",

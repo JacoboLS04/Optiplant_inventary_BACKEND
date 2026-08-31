@@ -19,6 +19,9 @@ public class ActualizarUsuarioRequest {
 
     private Long sucursalId;
 
+    /** Obligatorio solo para el rol PROVEEDOR: el proveedor al que pertenece. */
+    private Long proveedorId;
+
     /** Contraseña opcional: si viene en blanco se conserva la actual. */
     @Size(min = 6, message = "La contraseña debe tener al menos 6 caracteres")
     private String password;

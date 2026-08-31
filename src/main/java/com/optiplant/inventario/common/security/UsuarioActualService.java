@@ -29,7 +29,18 @@ public class UsuarioActualService {
         if (auth == null || !(auth.getPrincipal() instanceof UserDetails userDetails)) {
             return Optional.empty();
         }
-        return usuarioRepository.findByEmail(userDetails.getUsername());
+        Optional<Usuario> usuario = usuarioRepository.findByEmail(userDetails.getUsername());
+        usuario.ifPresent(u -> {
+            // Inicializa las relaciones LAZY dentro de la transacción para poder
+            // leer sucursal/proveedor fuera de ella (evita LazyInitializationException).
+            if (u.getSucursal() != null) {
+                u.getSucursal().getNombre();
+            }
+            if (u.getProveedor() != null) {
+                u.getProveedor().getNombre();
+            }
+        });
+        return usuario;
     }
 
     public boolean esAdministrador() {

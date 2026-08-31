@@ -31,6 +31,8 @@ public class NuevaVentaRequest {
     @Valid
     private List<LineaRequest> lineas;
 
+    private String medioPago;
+
     @Data
     @Builder
     @NoArgsConstructor

@@ -79,6 +79,8 @@ public class VentaService {
                 .sucursal(sucursal)
                 .usuario(resolveUsuario())
                 .descuentoPorcentaje(descuento)
+                .medioPago(request.getMedioPago() != null && !request.getMedioPago().isBlank()
+                        ? request.getMedioPago().trim() : null)
                 .fecha(LocalDateTime.now())
                 .build();
 

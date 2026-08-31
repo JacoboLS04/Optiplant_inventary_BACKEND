@@ -17,5 +17,7 @@ public class UsuarioResponse {
     private String rol;
     private Long sucursalId;
     private String sucursalNombre;
+    private Long proveedorId;
+    private String proveedorNombre;
     private Boolean activo;
 }

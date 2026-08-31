@@ -27,6 +27,9 @@ public class PrecioService {
 
     @Transactional
     public PrecioProductoResponse setPrecio(PrecioProductoRequest request) {
+        if (request.getProductoId() == null) {
+            throw new BusinessRuleException("El producto es obligatorio");
+        }
         Producto producto = productoRepository.findById(request.getProductoId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Producto no encontrado: " + request.getProductoId()));

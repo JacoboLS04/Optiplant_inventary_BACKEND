@@ -32,6 +32,10 @@ public class Usuario {
     @JoinColumn(name = "sucursal_id")
     private com.optiplant.inventario.catalogo.entity.Sucursal sucursal;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "proveedor_id")
+    private com.optiplant.inventario.compras.entity.Proveedor proveedor;
+
     @Column(nullable = false)
     @Builder.Default
     private Boolean activo = true;

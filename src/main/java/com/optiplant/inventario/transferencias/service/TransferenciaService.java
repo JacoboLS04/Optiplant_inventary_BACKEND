@@ -7,6 +7,7 @@ import com.optiplant.inventario.catalogo.repository.SucursalRepository;
 import com.optiplant.inventario.common.dto.PaginatedResponse;
 import com.optiplant.inventario.common.exception.BusinessRuleException;
 import com.optiplant.inventario.common.exception.ResourceNotFoundException;
+import com.optiplant.inventario.common.security.UsuarioActualService;
 import com.optiplant.inventario.identidad.entity.Usuario;
 import com.optiplant.inventario.identidad.repository.UsuarioRepository;
 import com.optiplant.inventario.inventario.dto.MovimientoInventarioRequest;
@@ -73,6 +74,7 @@ public class TransferenciaService {
     private final ExistenciaRepository existenciaRepository;
     private final MovimientoInventarioService movimientoInventarioService;
     private final TransferenciaMapper mapper;
+    private final UsuarioActualService usuarioActualService;
 
     @Transactional
     public TransferenciaResponse crear(TransferenciaRequest request) {
@@ -87,6 +89,10 @@ public class TransferenciaService {
         Sucursal destino = sucursalRepository.findById(request.getSucursalDestinoId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Sucursal destino no encontrada: " + request.getSucursalDestinoId()));
+
+        // RF-009: el solicitante solo puede originar transferencias desde su propia
+        // sucursal (el ADMINISTRADOR puede en cualquiera).
+        usuarioActualService.validarAccesoSucursal(origen.getId());
 
         Set<Long> productosVistos = new HashSet<>();
         List<TransferenciaLinea> lineas = new ArrayList<>();
@@ -207,6 +213,19 @@ public class TransferenciaService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Gerente no encontrado: " + request.getGerenteId()));
 
+        // RF-009: el rol ORIGEN debe ser aprobado por un gerente de la sucursal de
+        // origen y el rol DESTINO por un gerente de la sucursal de destino.
+        Long sucursalRol = request.getRolAprobacion() == RolAprobacion.ORIGEN
+                ? transferencia.getSucursalOrigen().getId()
+                : transferencia.getSucursalDestino().getId();
+        Long sucursalGerente = gerente.getSucursal() != null ? gerente.getSucursal().getId() : null;
+        if (!usuarioActualService.esAdministrador()
+                && (sucursalGerente == null || !sucursalGerente.equals(sucursalRol))) {
+            throw new AccessDeniedException(
+                    "El gerente del rol " + request.getRolAprobacion()
+                            + " debe pertenecer a la sucursal correspondiente (RF-009)");
+        }
+
         TransferenciaAprobacion aprobacion = TransferenciaAprobacion.builder()
                 .transferencia(transferencia)
                 .gerente(gerente)
@@ -244,6 +263,7 @@ public class TransferenciaService {
     @Transactional
     public TransferenciaResponse preparar(Long id) {
         Transferencia transferencia = findOrThrow(id);
+        usuarioActualService.validarAccesoSucursal(transferencia.getSucursalOrigen().getId());
         if (transferencia.getEstado() != EstadoTransferencia.APROBADA) {
             throw new BusinessRuleException(
                     "Solo se puede preparar una transferencia APROBADA. Estado actual: "
@@ -256,6 +276,7 @@ public class TransferenciaService {
     @Transactional
     public TransferenciaResponse despachar(Long id, TransferenciaDespachoRequest request) {
         Transferencia transferencia = findOrThrow(id);
+        usuarioActualService.validarAccesoSucursal(transferencia.getSucursalOrigen().getId());
 
         if (transferencia.getEstado() != EstadoTransferencia.EN_PREPARACION) {
             throw new BusinessRuleException(
@@ -328,6 +349,7 @@ public class TransferenciaService {
     @Transactional
     public TransferenciaResponse recibir(Long id, TransferenciaRecepcionRequest request) {
         Transferencia transferencia = findOrThrow(id);
+        usuarioActualService.validarAccesoSucursal(transferencia.getSucursalDestino().getId());
 
         if (transferencia.getEstado() != EstadoTransferencia.EN_TRANSITO) {
             throw new BusinessRuleException(

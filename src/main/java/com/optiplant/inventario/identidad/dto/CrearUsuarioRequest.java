@@ -27,4 +27,7 @@ public class CrearUsuarioRequest {
     private String rol;
 
     private Long sucursalId;
+
+    /** Obligatorio solo para el rol PROVEEDOR: el proveedor al que pertenece. */
+    private Long proveedorId;
 }

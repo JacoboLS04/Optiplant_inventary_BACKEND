@@ -3,6 +3,7 @@ package com.optiplant.inventario.identidad.controller;
 import com.optiplant.inventario.common.security.CustomUserDetailsService;
 import com.optiplant.inventario.common.security.JwtUtil;
 import com.optiplant.inventario.common.security.TokenRevocationService;
+import com.optiplant.inventario.common.security.UsuarioActualService;
 import com.optiplant.inventario.identidad.dto.AuthResponse;
 import com.optiplant.inventario.identidad.dto.LoginRequest;
 import com.optiplant.inventario.identidad.dto.UsuarioResponse;
@@ -28,6 +29,25 @@ public class AuthController {
     private final JwtUtil jwtUtil;
     private final UsuarioRepository usuarioRepository;
     private final TokenRevocationService tokenRevocationService;
+    private final UsuarioActualService usuarioActualService;
+
+    @GetMapping("/me")
+    public ResponseEntity<UsuarioResponse> perfilActual() {
+        Usuario usuario = usuarioActualService.actual()
+                .orElseThrow(() -> new com.optiplant.inventario.common.exception.ResourceNotFoundException(
+                        "Usuario autenticado no encontrado"));
+        return ResponseEntity.ok(UsuarioResponse.builder()
+                .id(usuario.getId())
+                .email(usuario.getEmail())
+                .nombre(usuario.getNombre())
+                .rol(usuario.getRol())
+                .sucursalId(usuario.getSucursal() != null ? usuario.getSucursal().getId() : null)
+                .sucursalNombre(usuario.getSucursal() != null ? usuario.getSucursal().getNombre() : null)
+                .proveedorId(usuario.getProveedor() != null ? usuario.getProveedor().getId() : null)
+                .proveedorNombre(usuario.getProveedor() != null ? usuario.getProveedor().getNombre() : null)
+                .activo(usuario.getActivo() != null ? usuario.getActivo() : true)
+                .build());
+    }
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {

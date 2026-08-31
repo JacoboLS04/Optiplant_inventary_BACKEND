@@ -13,7 +13,10 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class PrecioProductoRequest {
 
-    @NotNull(message = "El producto es obligatorio")
+    /**
+     * En POST llega en el cuerpo; en PUT lo inyecta el controller desde la
+     * ruta, por eso no se valida con @NotNull aquí (permitiendo body {precio}).
+     */
     private Long productoId;
 
     @NotNull(message = "El precio es obligatorio")

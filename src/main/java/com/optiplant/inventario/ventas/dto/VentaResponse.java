@@ -22,6 +22,7 @@ public class VentaResponse {
     private BigDecimal total;
     private BigDecimal unidades;
     private LocalDateTime fecha;
+    private String medioPago;
     private List<LineaResponse> lineas;
 
     @Data
