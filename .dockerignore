@@ -1,7 +1,6 @@
 target/
 .git
 .gitignore
-docs/
 *.iml
 .idea/
 .classpath
